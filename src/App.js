@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import scenarioData from './data/scenarios.json';
-import ScenarioScreen from './components/ScenarioScreen';
+import ScenarioScene from './components/ScenarioScene';
 import { assignBadge } from './logic/assignBadge';
 import { getMaskFragments } from './logic/getMaskFragments';
 import MaskGrid from './components/MaskGrid';
+import DoorScene from './components/DoorScene';
+
 
 function App() {
   const [choices, setChoices] = useState([]);
@@ -19,28 +21,25 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative space-y-8">
-      <h1 className="text-3xl font-bold">AI Ethics Game</h1>
-
-      <MaskGrid choices={choices} />
-
+    <div className="w-screen h-screen bg-black text-white relative overflow-hidden">
+      <h1 className="absolute top-4 left-1/2 transform -translate-x-1/2 text-3xl font-bold z-10">AI Ethics Game</h1>
+  
+      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
+        <MaskGrid choices={choices} />
+      </div>
+  
       {!gameOver ? (
-        <ScenarioScreen
-          scenario={scenarioData[currentIndex]}
-          onChoice={handleChoice}
-        />
+        <ScenarioScene
+        scenario={scenarioData[currentIndex]}
+        onChoice={handleChoice}
+      />      
       ) : (
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold text-yellow-400">You’ve Completed the Journey</h2>
-          <p className="text-xl">Your Emblem:</p>
-          <p className="text-2xl font-semibold text-white bg-slate-800 px-4 py-2 inline-block rounded-xl">
-            {finalBadge}
-          </p>
-          <p className="text-md text-gray-400">(And here’s the full mask you built)</p>
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <h2 className="text-2xl">Your Badge: {finalBadge}</h2>
         </div>
       )}
     </div>
-  );
+  );  
 }
 
 export default App;

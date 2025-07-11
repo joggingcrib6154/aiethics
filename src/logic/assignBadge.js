@@ -1,4 +1,3 @@
-
 const BADGES = [
     'Catalyst', 'Phantom', 'Humanist', 'Architect',
     'The Drift', 'Dissenter', 'Strategist', 'Visionary'

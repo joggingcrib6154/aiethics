@@ -36,3 +36,7 @@
     transform: rotate(360deg);
   }
 }
+
+.App { text-align: center; }
+.App-logo { height: 40vmin; }
+.App-header { background-color: #282c34; }

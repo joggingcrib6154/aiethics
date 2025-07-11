@@ -1,35 +1,57 @@
 import React, { useState } from 'react';
+import { Canvas, useLoader } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { useSpring, a } from '@react-spring/three';
+import * as THREE from 'three';
 
-export default function DoorScene({ onChoice }) {
-  const [animating, setAnimating] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(null);
+function Door({ position = [0, 0, 0], onClick }) {
+  const [hovered, setHovered] = useState(false);
+  const texture = useLoader(THREE.TextureLoader, '/textures/wood.jpg');
 
-  const handleClick = (index) => {
-    setSelectedIndex(index);
-    setAnimating(true);
-    setTimeout(() => {
-      setAnimating(false);
-      onChoice(index);
-    }, 800);
-  };
+  const { rotation } = useSpring({
+    rotation: hovered ? [0, -0.3, 0] : [0, 0, 0],
+    config: { mass: 1, tension: 180, friction: 18 },
+  });
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      <div className="absolute inset-0 flex items-center justify-center gap-8">
-        {[0, 1, 2].map((index) => (
-          <div
-            key={index}
-            onClick={() => handleClick(index)}
-            className={`w-24 h-40 bg-gray-600 rounded transition-transform duration-700 ease-in-out cursor-pointer origin-center ${
-              animating && selectedIndex === index ? 'scale-[30] z-50' : ''
-            }`}
-          />
-        ))}
-      </div>
+    <a.group
+      position={position}
+      rotation={rotation}
+      onClick={onClick}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+    >
 
-      {animating && (
-        <div className="fixed inset-0 bg-black opacity-70 transition-opacity duration-700 z-40 pointer-events-none" />
-      )}
+      <mesh castShadow>
+        <boxGeometry args={[2, 4, 0.3]} />
+        <meshStandardMaterial
+          map={texture}
+          roughness={0.6}
+          metalness={0.1}
+        />
+      </mesh>
+
+    
+      <mesh position={[0.9, 0, 0.2]}>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshStandardMaterial color="#222" metalness={1} roughness={0.4} />
+      </mesh>
+    </a.group>
+  );
+}
+
+export default function DoorScene({ onChoice }) {
+  return (
+    <div className="w-full h-full">
+      <Canvas camera={{ position: [0, 0, 10], fov: 45 }} shadows>
+        <ambientLight intensity={0.3} />
+        <directionalLight position={[5, 5, 5]} intensity={1.2} castShadow />
+        <pointLight position={[-5, -5, 5]} intensity={0.6} />
+        <Door position={[-3, 0, 0]} onClick={() => onChoice(0)} />
+        <Door position={[0, 0, 0]} onClick={() => onChoice(1)} />
+        <Door position={[3, 0, 0]} onClick={() => onChoice(2)} />
+        <OrbitControls enableZoom={false} />
+      </Canvas>
     </div>
   );
 }
