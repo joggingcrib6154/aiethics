@@ -5,9 +5,14 @@ import { assignBadge } from './logic/assignBadge';
 import { getMaskFragments } from './logic/getMaskFragments';
 import MaskGrid from './components/MaskGrid';
 import DoorScene from './components/DoorScene';
+import Playground from './components/Playground';
 
 
 function App() {
+
+  /*return <Playground />;*/
+
+  
   const [choices, setChoices] = useState([]);
 
   const currentIndex = choices.length;
@@ -21,10 +26,10 @@ function App() {
   };
 
   return (
-    <div className="w-screen h-screen bg-black text-white relative overflow-hidden">
+    <div className="fixed inset-0 bg-black text-white overflow-hidden">
       <h1 className="absolute top-4 left-1/2 transform -translate-x-1/2 text-3xl font-bold z-10">AI Ethics Game</h1>
   
-      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
+      <div className="absolute top-4 right-4 z-10">
         <MaskGrid choices={choices} />
       </div>
   
@@ -32,6 +37,7 @@ function App() {
         <ScenarioScene
         scenario={scenarioData[currentIndex]}
         onChoice={handleChoice}
+        choices={choices}
       />      
       ) : (
         <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -39,7 +45,7 @@ function App() {
         </div>
       )}
     </div>
-  );  
+  ); 
 }
 
 export default App;

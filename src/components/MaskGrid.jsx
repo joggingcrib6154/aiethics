@@ -5,9 +5,10 @@ export default function MaskGrid({ choices }) {
   const totalTiles = 20;
 
   const fragments = Array.from({ length: totalTiles }, (_, i) => {
-    if (i < choices.length) {
+    const choice = choices[i];
+    if (choice === 0 || choice === 1 || choice === 2) {
       const questionNum = i + 1;
-      const letter = ['a', 'b', 'c'][choices[i]];
+      const letter = ['a', 'b', 'c'][choice];
       return `${questionNum}${letter}.png`;
     }
     return null;
@@ -16,11 +17,12 @@ export default function MaskGrid({ choices }) {
   return (
     <div
       style={{
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
+        position: 'fixed',
+        top: 24,
+        right: 24,
         transform: 'scale(0.5)',
-        transformOrigin: 'bottom right',
+        transformOrigin: 'top right',
+        zIndex: 1000,
         display: 'grid',
         gridTemplateColumns: `repeat(4, ${tileSize}px)`,
         gridTemplateRows: `repeat(5, ${tileSize}px)`
@@ -28,10 +30,11 @@ export default function MaskGrid({ choices }) {
     >
       {fragments.map((filename, i) => (
         <div
-          key={i}
+          key={`${i}-${filename ?? 'empty'}`}
           style={{
             width: `${tileSize}px`,
             height: `${tileSize}px`,
+            boxSizing: 'border-box',
             border: '1px solid #374151',
             backgroundColor: '#111827',
             borderRadius: '12px',
@@ -43,6 +46,7 @@ export default function MaskGrid({ choices }) {
         >
           {filename ? (
             <img
+              key={filename}
               src={`/maskfrags/${filename}`}
               alt=""
               style={{
