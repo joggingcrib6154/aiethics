@@ -27,7 +27,6 @@ function App() {
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
-      <h1 className="absolute top-4 left-1/2 transform -translate-x-1/2 text-3xl font-bold z-10">AI Ethics Game</h1>
   
       <div className="absolute top-4 right-4 z-10">
         <MaskGrid choices={choices} />

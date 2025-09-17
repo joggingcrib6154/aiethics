@@ -4,6 +4,8 @@ import { TextureLoader, Vector3 } from "three";
 import { animated, useSpring } from "@react-spring/three";
 import { Text } from "@react-three/drei";
 import MaskGrid from "./MaskGrid";
+import WormholeEffect from "./DoorShaders";
+import BackgroundShader from "./BackgroundShaders";
 
 const FRAGMENT_APPEAR_DELAY = 600;
 
@@ -55,7 +57,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
   );
 }
 
-function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices }) {
+function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices, setShowWormhole, doorRefs }) {
   const { camera } = useThree();
   const initialQuat = useRef();
 
@@ -70,7 +72,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices 
   const directionRef = useRef(null);
   const resetRef = useRef(false);
   const zoomOutTimerRef = useRef(null);
-  const doorRefs = useRef([]);
+  // const doorRefs = useRef([]);
   const activeClickedRef = useRef(null);
   const [movingDoorIndex, setMovingDoorIndex] = useState(null);
   const [backgroundHidden, setBackgroundHidden] = useState(false);
@@ -124,6 +126,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices 
             directionRef.current = null;
             setMovingDoorIndex(null);
             zoomStartRef.current = null;
+            if (setShowWormhole) setShowWormhole(true);
             if (typeof onFinish === "function") onFinish(finishedIndex);
           }
         }
@@ -216,11 +219,30 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices 
       <directionalLight position={[5, 5, 5]} intensity={1} />
 
       {!backgroundHidden && (
-        <>
-          <Text position={[0, 5.2, -2]} fontSize={0.28} color="white" anchorX="center" anchorY="middle">
+        <group renderOrder={5}>
+          <Text
+            position={[0, 5.2, -2]}
+            fontSize={0.28}
+            color="white"
+            anchorX="center"
+            anchorY="middle"
+            renderOrder={5}
+            depthTest={false}
+            depthWrite={false}
+          >
             {scenario.title}
           </Text>
-          <Text position={[0, 4.8, -2]} fontSize={0.16} maxWidth={6} color="white" anchorX="center" anchorY="middle">
+          <Text
+            position={[0, 4.8, -2]}
+            fontSize={0.16}
+            maxWidth={6}
+            color="white"
+            anchorX="center"
+            anchorY="middle"
+            renderOrder={5}
+            depthTest={false}
+            depthWrite={false}
+          >
             {scenario.description}
           </Text>
 
@@ -242,7 +264,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices 
               />
             );
           })}
-        </>
+        </group>
       )}
 
     </>
@@ -252,15 +274,28 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices 
 export default function ScenarioScene({ scenario, choices, onChoice }) {
   const [maskAnimateTo, setMaskAnimateTo] = useState({ top: 0, right: 0, scale: 0.5 });
   const [showMaskGrid, setShowMaskGrid] = useState(false);
+  const [showWormhole, setShowWormhole] = useState(false);
+  const doorRefs = useRef([]);
   return (
     <div className="canvas-container" style={{ width: "100vw", height: "100vh", position: 'relative' }}>
       <Canvas
+        frameloop="always"
         shadows
         camera={{ position: [0, 1.6, 6], fov: 50 }}
         style={{ pointerEvents: "auto" }}
       >
         <Suspense fallback={null}>
-          <Scene scenario={scenario} onFinish={onChoice} setMaskAnimateTo={setMaskAnimateTo} setShowMaskGrid={setShowMaskGrid} choices={choices} />
+          <BackgroundShader visible={true} />
+          <Scene
+            scenario={scenario}
+            onFinish={onChoice}
+            setMaskAnimateTo={setMaskAnimateTo}
+            setShowMaskGrid={setShowMaskGrid}
+            choices={choices}
+            setShowWormhole={setShowWormhole}
+            doorRefs={doorRefs}
+          />
+          <WormholeEffect doorRefs={doorRefs} active={true} visible={showWormhole} />
         </Suspense>
       </Canvas>
       {showMaskGrid && <MaskGrid choices={choices} animateTo={maskAnimateTo} />}
