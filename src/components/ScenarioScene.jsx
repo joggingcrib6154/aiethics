@@ -10,7 +10,7 @@ import BackgroundShader from "./BackgroundShaders";
 const FRAGMENT_APPEAR_DELAY = 600;
 
 function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef }) {
-  const texture = useLoader(TextureLoader, "/textures/wood.jpg");
+  const texture = useLoader(TextureLoader, "/textures/bluewood.jpg");
   const groupRef = useRef();
 
   const { pos, rot } = useSpring({
@@ -25,11 +25,11 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       if (doorRef) doorRef(node);
     }} position={pos}>
       <Text
-        position={[0.48, 0, -0.3]}
-        fontSize={0.17}
+        position={[0.6, 0, -0.3]}
+        fontSize={0.136}
         color="white"
-        maxWidth={0.5}
-        lineHeight={1.2}
+        maxWidth={0.05}
+        lineHeight={1.44}
         textAlign="center"
         anchorX="center"
         anchorY="middle"
@@ -80,7 +80,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   const reachedTargetTimeRef = useRef(null);
   const overshootPositionRef = useRef(null);
   const zoomStartRef = useRef(null);
-  const ZOOM_DURATION = 3000;
+  const ZOOM_DURATION = 1500;
   const ZOOM_SPEED = 5;
 
 
@@ -188,7 +188,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
     if (doorRefs.current[i]) {
       const doorCenter = new Vector3();
       doorRefs.current[i].getWorldPosition(doorCenter);
-      const offset = new Vector3(0.4, 0.6, 0); 
+      const offset = new Vector3(0.57, 0.5, 0); 
       const targetPos = doorCenter.clone().add(offset);
       const dir = targetPos.clone().sub(camera.position).normalize();
       directionRef.current = dir;
@@ -215,6 +215,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
 
   return (
     <>
+      <BackgroundShader visible={!backgroundHidden} />
       <ambientLight intensity={0.6} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
 
@@ -285,7 +286,6 @@ export default function ScenarioScene({ scenario, choices, onChoice }) {
         style={{ pointerEvents: "auto" }}
       >
         <Suspense fallback={null}>
-          <BackgroundShader visible={true} />
           <Scene
             scenario={scenario}
             onFinish={onChoice}

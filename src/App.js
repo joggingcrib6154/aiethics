@@ -6,6 +6,7 @@ import { getMaskFragments } from './logic/getMaskFragments';
 import MaskGrid from './components/MaskGrid';
 import DoorScene from './components/DoorScene';
 import Playground from './components/Playground';
+import EndScreen from './components/EndScreen';
 
 
 function App() {
@@ -39,9 +40,7 @@ function App() {
         choices={choices}
       />      
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <h2 className="text-2xl">Your Badge: {finalBadge}</h2>
-        </div>
+        <EndScreen choices={choices} finalBadge={finalBadge} />
       )}
     </div>
   ); 

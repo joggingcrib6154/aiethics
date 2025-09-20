@@ -4,48 +4,56 @@ import * as THREE from "three";
 
 const vertexShader = `
 varying vec2 vUv;
+varying vec2 v_uv;
 void main() {
   vUv = uv;
+  v_uv = uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
 `;
 
 const fragmentShader = `
-#define PI 3.14152965
-#define PI2 (PI*2.)
-#define HALF_PI (PI*0.5)
-#define QUARTER_PI (PI*0.25)
-
 uniform float iTime;
 uniform vec2 iResolution;
+uniform sampler2D u_map;
 varying vec2 vUv;
+varying vec2 v_uv;
 
-const float zoom = 1.;
-const float door_aspect = 1.75;
-const float spiral_rate = 1.75;
-const float speed = 1.5;
+float random (in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))*
+        43758.5453123);
+}
+
+float noise(in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+
+    vec2 u = f*f*(3.0-2.0*f);
+
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+vec3 aurora(vec2 uv, float time) {
+    float n = noise(uv * 10.0 + vec2(0.0, time * 0.1));
+    float intensity = smoothstep(0.3, 0.7, n);
+    vec3 color = mix(vec3(0.0, 0.5, 0.3), vec3(0.0, 1.0, 0.8), intensity);
+    color *= smoothstep(0.0, 0.5, uv.y) * (1.0 - uv.y);
+    return color;
+}
 
 void main() {
-    vec2 fragCoord = vUv * iResolution;
-    vec2 uv = (2.*fragCoord - iResolution.xy) / iResolution.y;
-    
-    uv.y /= door_aspect;
-    float r = length(uv);
-    float theta = atan(uv.y,uv.x);
-    
-    float phi = mod(theta+QUARTER_PI,HALF_PI)-QUARTER_PI;
-    float square = r*zoom*cos(phi);
-    
-    float spiral = mod(1./(square*spiral_rate) + theta/PI2 + iTime*speed,1.0);
-    spiral = step(spiral,min(square,0.2));
-
-    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(r,2.0,4.0));
-    vec3 spiralColor = col * spiral;
-    vec3 glow = col + 1.0;
-    
-    col = mix(spiralColor,glow,clamp(1.0-square*5.0+(sin(iTime*0.1)+1.0)*0.1,0.0,1.0));
-
-    gl_FragColor = vec4(col,1.0);
+    vec2 uv = v_uv;
+    vec3 color = aurora(uv, iTime);
+    vec4 texColor = texture2D(u_map, vUv);
+    gl_FragColor = vec4(color * texColor.rgb, texColor.a);
 }
 `;
 
@@ -75,25 +83,25 @@ function selectTargetMesh(doorGroup) {
   return smallest;
 }
 
-export default function WormholeEffect({ doorRefs }) {
+export default function WormholeEffect({ doorRefs, active = true, visible = true }) {
   const doors = doorRefs?.current || [];
 
-  const shaderMatsRef = useRef([0, 1, 2].map(() => {
-    const mat = new THREE.ShaderMaterial({
+  const shaderMatsRef = useRef([0, 1, 2].map(() =>
+    new THREE.ShaderMaterial({
       uniforms: {
         iTime: { value: 0 },
-        iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+        iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        u_map: { value: null }
       },
       vertexShader,
       fragmentShader,
       side: THREE.DoubleSide,
       transparent: true,
-      depthTest: true,
-      depthWrite: false
-    });
-    mat.renderOrder = 1;
-    return mat;
-  }));
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    })
+  ));
 
   const originalMaterialsRef = useRef({});
 
@@ -101,11 +109,14 @@ export default function WormholeEffect({ doorRefs }) {
     doors.forEach((doorGroup, i) => {
       if (doorGroup) {
         const targetMesh = selectTargetMesh(doorGroup);
-        if (targetMesh) {
+        if (targetMesh && shaderMatsRef.current[i]) {
           if (!originalMaterialsRef.current[i]) {
             originalMaterialsRef.current[i] = targetMesh.material;
           }
           targetMesh.material = shaderMatsRef.current[i];
+          if (targetMesh.material && originalMaterialsRef.current[i].map) {
+            shaderMatsRef.current[i].uniforms.u_map.value = originalMaterialsRef.current[i].map;
+          }
         }
       }
     });
@@ -115,12 +126,27 @@ export default function WormholeEffect({ doorRefs }) {
     shaderMatsRef.current.forEach((mat, i) => {
       mat.uniforms.iTime.value = clock.elapsedTime;
       mat.uniforms.iResolution.value.set(size.width, size.height);
+      mat.visible = !!(active && visible);
 
       const doorGroup = doors[i];
       if (doorGroup) {
         const targetMesh = selectTargetMesh(doorGroup);
-        if (targetMesh && targetMesh.material !== mat) {
-          targetMesh.material = mat;
+        if (targetMesh) {
+          if (!originalMaterialsRef.current[i]) {
+            originalMaterialsRef.current[i] = targetMesh.material;
+          }
+          if (active && visible) {
+            if (targetMesh.material !== mat) {
+              targetMesh.material = mat;
+              if (originalMaterialsRef.current[i].map) {
+                mat.uniforms.u_map.value = originalMaterialsRef.current[i].map;
+              }
+            }
+          } else {
+            if (originalMaterialsRef.current[i] && targetMesh.material !== originalMaterialsRef.current[i]) {
+              targetMesh.material = originalMaterialsRef.current[i];
+            }
+          }
         }
       }
     });
