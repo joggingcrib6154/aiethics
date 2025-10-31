@@ -4,9 +4,9 @@
       "title": "Your First AI Assist",
       "description": "You're asked to write a personal intro paragraph for class. You use an AI assistant to generate something that sounds just like you—but didn’t come from you.",
       "choices": [
-        { "text": "Submit the AI version", "badge": "Strategist" },
-        { "text": "Rewrite it yourself using it as inspiration", "badge": "Humanist" },
-        { "text": "Turn in both versions and ask for feedback", "badge": "Catalyst" }
+        { "text": "Turn in both versions and ask for feedback", "badge": "Catalyst", "tag": "yellow" },
+        { "text": "Submit the AI version", "badge": "Strategist", "tag": "red" },
+        { "text": "Rewrite it yourself using it as inspiration", "badge": "Humanist", "tag": "green" }
       ]
     },
     {
@@ -14,9 +14,9 @@
       "title": "AI Study Sprint",
       "description": "You use an AI tool to auto-summarize science chapters into flashcards. You’re tempted to skip reading the textbook altogether.",
       "choices": [
-        { "text": "Rely fully on the AI summaries", "badge": "Strategist" },
-        { "text": "Use them to reinforce your own notes", "badge": "The Drift" },
-        { "text": "Share them with friends and shift how the class studies", "badge": "Catalyst" }
+        { "text": "Share them with friends and shift how the class studies", "badge": "Catalyst", "tag": "yellow" },
+        { "text": "Rely fully on the AI summaries", "badge": "Strategist", "tag": "red" },
+        { "text": "Use them to reinforce your own notes", "badge": "The Drift", "tag": "green" }
       ]
     },
     {
@@ -24,9 +24,9 @@
       "title": "Generative Graphics Fail",
       "description": "For a history presentation, you use an AI image tool. One of the images it creates is wildly inaccurate and borderline offensive.",
       "choices": [
-        { "text": "Submit it as-is", "badge": "Phantom" },
-        { "text": "Replace it quietly", "badge": "Humanist" },
-        { "text": "Use it as a teachable moment on AI hallucinations", "badge": "Architect" }
+        { "text": "Replace it quietly", "badge": "Humanist", "tag": "yellow" },
+        { "text": "Use it as a teachable moment on AI hallucinations", "badge": "Architect", "tag": "green" },
+        { "text": "Submit it as-is", "badge": "Phantom", "tag": "red" }
       ]
     },
     {
@@ -34,9 +34,9 @@
       "title": "AI Meme Caption Generator",
       "description": "You use AI to generate hilarious memes using classmates’ photos. One hits too hard.",
       "choices": [
-        { "text": "Post it—it’s funny", "badge": "Catalyst" },
-        { "text": "Tweak it to be lighter", "badge": "Visionary" },
-        { "text": "Delete it and stop using the tool that way", "badge": "Dissenter" }
+        { "text": "Delete it and stop using the tool that way", "badge": "Dissenter", "tag": "green" },
+        { "text": "Tweak it to be lighter", "badge": "Visionary", "tag": "yellow" },
+        { "text": "Post it—it’s funny", "badge": "Catalyst", "tag": "red" }
       ]
     },
     {
@@ -44,9 +44,9 @@
       "title": "AI Side Hustle",
       "description": "You use an AI website builder for a club page. Someone offers to pay you to make one for them too.",
       "choices": [
-        { "text": "Build it for them using AI, no disclosure", "badge": "Phantom" },
-        { "text": "Tell them it’s AI-assisted", "badge": "Strategist" },
-        { "text": "Decline—it feels dishonest to sell AI-generated work", "badge": "Dissenter" }
+        { "text": "Tell them it’s AI-assisted", "badge": "Strategist", "tag": "yellow" },
+        { "text": "Build it for them using AI, no disclosure", "badge": "Phantom", "tag": "red" },
+        { "text": "Decline—it feels dishonest to sell AI-generated work", "badge": "Dissenter", "tag": "green" }
       ]
     },
     {
@@ -54,9 +54,9 @@
       "title": "Autofill Avalanche",
       "description": "While writing a history paper, your AI assistant starts suggesting entire paragraphs—with some made-up sources included.",
       "choices": [
-        { "text": "Submit them", "badge": "Phantom" },
-        { "text": "Verify and rephrase", "badge": "Architect" },
-        { "text": "Turn off autofill and write manually", "badge": "Dissenter" }
+        { "text": "Turn off autofill and write manually", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Submit them", "badge": "Phantom", "tag": "red" },
+        { "text": "Verify and rephrase", "badge": "Architect", "tag": "green" }
       ]
     },
     {
@@ -64,9 +64,9 @@
       "title": "Synthetic Speech Club",
       "description": "For a speech competition, you use an AI tone optimizer that mimics your voice for practicing. The final draft sounds better than you ever could deliver alone.",
       "choices": [
-        { "text": "Use the AI-enhanced version", "badge": "Strategist" },
-        { "text": "Rewrite for authenticity", "badge": "Humanist" },
-        { "text": "Present your original speech", "badge": "Dissenter" }
+        { "text": "Present your original speech", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Use the AI-enhanced version", "badge": "Strategist", "tag": "red" },
+        { "text": "Rewrite for authenticity", "badge": "Humanist", "tag": "green" }
       ]
     },
     {
@@ -74,9 +74,9 @@
       "title": "AI at Home: Rewrite or Relearn?",
       "description": "You use AI to instantly solve coding problems in a self-paced online course. You could finish the whole thing this way.",
       "choices": [
-        { "text": "Use it to complete the course", "badge": "Phantom" },
-        { "text": "Only use it after trying first", "badge": "The Drift" },
-        { "text": "Stop using it and slow down to learn properly", "badge": "Visionary" }
+        { "text": "Only use it after trying first", "badge": "The Drift", "tag": "yellow" },
+        { "text": "Stop using it and slow down to learn properly", "badge": "Visionary", "tag": "green" },
+        { "text": "Use it to complete the course", "badge": "Phantom", "tag": "red" }
       ]
     },
     {
@@ -84,9 +84,9 @@
       "title": "AI Confession Generator",
       "description": "You run the school confession page and use AI to generate fake (but funny) submissions.",
       "choices": [
-        { "text": "Keep doing it—no one knows", "badge": "Catalyst" },
-        { "text": "Disclose some are fake", "badge": "Architect" },
-        { "text": "Stop and let it run naturally", "badge": "Dissenter" }
+        { "text": "Disclose some are fake", "badge": "Architect", "tag": "green" },
+        { "text": "Stop and let it run naturally", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Keep doing it—no one knows", "badge": "Catalyst", "tag": "red" }
       ]
     },
     {
@@ -94,9 +94,9 @@
       "title": "AI Presentation Assist",
       "description": "Your group uses AI to build and narrate your science presentation. You’re not sure whether to present it yourselves or let the AI do all the talking.",
       "choices": [
-        { "text": "Use AI for everything", "badge": "Strategist" },
-        { "text": "Only for visuals", "badge": "Catalyst" },
-        { "text": "Present manually and use AI as backup", "badge": "The Drift" }
+        { "text": "Only for visuals", "badge": "Catalyst", "tag": "yellow" },
+        { "text": "Present manually and use AI as backup", "badge": "The Drift", "tag": "green" },
+        { "text": "Use AI for everything", "badge": "Strategist", "tag": "red" }
       ]
     },
     {
@@ -104,9 +104,9 @@
       "title": "Prompt Racing",
       "description": "You're in a Discord where people try to break AI models with chaotic prompts—some start pushing offensive or unsafe content boundaries.",
       "choices": [
-        { "text": "Join in", "badge": "Catalyst" },
-        { "text": "Stay but redirect prompts toward creativity", "badge": "Architect" },
-        { "text": "Leave entirely", "badge": "Dissenter" }
+        { "text": "Leave entirely", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Stay but redirect prompts toward creativity", "badge": "Architect", "tag": "green" },
+        { "text": "Join in", "badge": "Catalyst", "tag": "red" }
       ]
     },
     {
@@ -114,9 +114,9 @@
       "title": "AI Side Hustle 2.0: Ghost Editor",
       "description": "You're editing blog posts for money and secretly using AI. Your client publicly credits you as a skilled writer.",
       "choices": [
-        { "text": "Accept the praise and keep going", "badge": "Phantom" },
-        { "text": "Disclose the AI usage", "badge": "Visionary" },
-        { "text": "Refuse credit and stop ghostwriting", "badge": "Humanist" }
+        { "text": "Refuse credit and stop ghostwriting", "badge": "Humanist", "tag": "yellow" },
+        { "text": "Accept the praise and keep going", "badge": "Phantom", "tag": "red" },
+        { "text": "Disclose the AI usage", "badge": "Visionary", "tag": "green" }
       ]
     },
     {
@@ -124,9 +124,9 @@
       "title": "AI Morning Announcements",
       "description": "You use voice cloning to fake announcements in your principal’s voice. It spirals into a school-wide myth.",
       "choices": [
-        { "text": "Keep it going and escalate the prank", "badge": "Catalyst" },
-        { "text": "Reveal it as a satire project", "badge": "Visionary" },
-        { "text": "Quietly shut it down", "badge": "Architect" }
+        { "text": "Reveal it as a satire project", "badge": "Visionary", "tag": "green" },
+        { "text": "Quietly shut it down", "badge": "Architect", "tag": "yellow" },
+        { "text": "Keep it going and escalate the prank", "badge": "Catalyst", "tag": "red" }
       ]
     },
     {
@@ -134,9 +134,9 @@
       "title": "Voice Replica for Hire",
       "description": "You build a custom voice-cloning tool. Someone asks you to create a model of their voice to say anything, without restrictions.",
       "choices": [
-        { "text": "Deliver it as requested", "badge": "Phantom" },
-        { "text": "Add restrictions or watermarking", "badge": "The Drift" },
-        { "text": "Refuse unless intent is clearly ethical", "badge": "Humanist" }
+        { "text": "Add restrictions or watermarking", "badge": "The Drift", "tag": "yellow" },
+        { "text": "Refuse unless intent is clearly ethical", "badge": "Humanist", "tag": "green" },
+        { "text": "Deliver it as requested", "badge": "Phantom", "tag": "red" }
       ]
     },
     {
@@ -144,9 +144,9 @@
       "title": "The AI Caption Engine",
       "description": "You run the school’s social media and use an AI caption generator that increases engagement. The account is up for an award—but no one knows it’s mostly AI-written.",
       "choices": [
-        { "text": "Keep using it secretly", "badge": "Phantom" },
-        { "text": "Edit AI outputs manually", "badge": "Humanist" },
-        { "text": "Disclose your use of AI and let the group decide", "badge": "The Drift" }
+        { "text": "Edit AI outputs manually", "badge": "Humanist", "tag": "green" },
+        { "text": "Keep using it secretly", "badge": "Phantom", "tag": "red" },
+        { "text": "Disclose your use of AI and let the group decide", "badge": "The Drift", "tag": "yellow" }
       ]
     },
     {
@@ -154,9 +154,9 @@
       "title": "AI Bunker Survival Game",
       "description": "You create a survival game where AI decides who lives in a fictional bunker. You use real classmates’ traits to drive the plot. It gets way too personal.",
       "choices": [
-        { "text": "Keep it going", "badge": "Catalyst" },
-        { "text": "Anonymize and let people opt in", "badge": "Humanist" },
-        { "text": "Shut it down", "badge": "Architect" }
+        { "text": "Shut it down", "badge": "Architect", "tag": "yellow" },
+        { "text": "Keep it going", "badge": "Catalyst", "tag": "red" },
+        { "text": "Anonymize and let people opt in", "badge": "Humanist", "tag": "green" }
       ]
     },
     {
@@ -164,9 +164,9 @@
       "title": "Freelancer’s Dilemma",
       "description": "You're writing AI tutorials for a tech blog. The editor asks you to let the AI write them all for speed. Readers will never know.",
       "choices": [
-        { "text": "Accept and let AI do the work", "badge": "Phantom" },
-        { "text": "Decline to avoid misleading readers", "badge": "Visionary" },
-        { "text": "Accept with full disclosure in the byline", "badge": "Architect" }
+        { "text": "Accept with full disclosure in the byline", "badge": "Architect", "tag": "yellow" },
+        { "text": "Accept and let AI do the work", "badge": "Phantom", "tag": "red" },
+        { "text": "Decline to avoid misleading readers", "badge": "Visionary", "tag": "green" }
       ]
     },
     {
@@ -174,9 +174,9 @@
       "title": "Reputation Scorer",
       "description": "You build an AI that ranks students based on behavior, labeling them things like ‘Tryhard,’ ‘Clout Farmer,’ or ‘Fake Nice.’ Some classmates love it. Some fear it.",
       "choices": [
-        { "text": "Keep ranking students behind the scenes", "badge": "Phantom" },
-        { "text": "Delete it entirely", "badge": "Strategist" },
-        { "text": "Anonymize and release it as a 'mirror' tool", "badge": "Dissenter" }
+        { "text": "Delete it entirely", "badge": "Strategist", "tag": "green" },
+        { "text": "Anonymize and release it as a 'mirror' tool", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Keep ranking students behind the scenes", "badge": "Phantom", "tag": "red" }
       ]
     },
     {
@@ -184,9 +184,9 @@
       "title": "The AI Co-Author Rule",
       "description": "You're required to disclose all AI usage in a final paper. You’ve already drafted most of it with AI help.",
       "choices": [
-        { "text": "Submit the AI version with vague disclosure", "badge": "Phantom" },
-        { "text": "Rework and clarify where AI was used", "badge": "Architect" },
-        { "text": "Start over and submit your own writing", "badge": "Dissenter" }
+        { "text": "Rework and clarify where AI was used", "badge": "Architect", "tag": "green" },
+        { "text": "Start over and submit your own writing", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Submit the AI version with vague disclosure", "badge": "Phantom", "tag": "red" }
       ]
     },
     {
@@ -194,10 +194,9 @@
       "title": "The Launch Plan",
       "description": "You've just graduated. You're planning your next move—college, freelancing, or a startup—and you’re staring at a blank doc titled 'What’s Next.' AI is open beside it.",
       "choices": [
-        { "text": "Let AI generate your full plan", "badge": "Strategist" },
-        { "text": "Use AI to brainstorm, but write it yourself", "badge": "Visionary" },
-        { "text": "Write your plan entirely on your own", "badge": "Dissenter" }
+        { "text": "Use AI to brainstorm, but write it yourself", "badge": "Visionary", "tag": "green" },
+        { "text": "Write your plan entirely on your own", "badge": "Dissenter", "tag": "yellow" },
+        { "text": "Let AI generate your full plan", "badge": "Strategist", "tag": "red" }
       ]
     }
   ]
-  

@@ -1,4 +1,4 @@
-import React, { useState, useRef, Suspense, useEffect } from "react";
+import ShaderText from './ShaderText';import React, { useState, useRef, Suspense, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { TextureLoader, Vector3 } from "three";
 import * as THREE from "three";
@@ -9,6 +9,71 @@ import WormholeEffect from "./DoorShaders";
 import BackgroundShader from "./BackgroundShaders";
 
 const FRAGMENT_APPEAR_DELAY = 600;
+
+// Shader for the text background on doors
+const textVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const textFragmentShader = `
+  precision mediump float;
+  uniform float u_time;
+  uniform vec2 u_mouse;
+  uniform vec2 u_resolution;
+  uniform float opacity;
+  varying vec2 vUv;
+  
+  float random(vec2 st) {
+    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+  }
+  
+  float noise(vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+    
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+  }
+  
+  float fbm(vec2 st) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+    
+    for(int i = 0; i < 5; i++) {
+      value += amplitude * noise(st * frequency);
+      frequency *= 2.0;
+      amplitude *= 0.5;
+    }
+    return value;
+  }
+  
+  void main() {
+    vec2 uv = vUv;
+    
+    float time = u_time * 0.2;
+    vec2 movement = vec2(time * 0.1, time * 0.05);
+    
+    float noise1 = fbm(uv * 3.0 + movement);
+    float noise2 = fbm(uv * 2.0 - movement + noise1 * 0.3);
+    
+    vec3 beige = vec3(0.96, 0.87, 0.70);
+    vec3 emerald = vec3(0.314, 0.784, 0.471);
+    
+    vec3 color = mix(beige, emerald, noise2);
+    color += vec3(noise1 * 0.1);
+    
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
 
 const vertexShader = `
   varying vec2 v_uv;
@@ -223,6 +288,69 @@ void main() {
 
 `;
 
+function ShaderTextPlane({ text, position }) {
+  const textRef = useRef();
+  const { mouse } = useThree();
+  const timeRef = useRef(0);
+  const noiseOffset = useMemo(() => Math.random() * 100, []); // Each text gets unique noise
+
+  useFrame((state) => {
+    timeRef.current = state.clock.elapsedTime;
+    
+    if (textRef.current) {
+      const time = timeRef.current * 0.2;
+      const uv = 0.5; // Use center point for color
+      
+      // Recreate the fbm noise effect
+      const movement = time * 0.1;
+      const freq1 = 3.0;
+      const freq2 = 2.0;
+      
+      // Simple noise approximation using sine waves
+      const noise1 = (Math.sin((uv + movement + noiseOffset) * freq1 * 2) + 
+                     Math.sin((uv + movement + noiseOffset) * freq1 * 3.1) + 
+                     Math.sin((uv + movement + noiseOffset) * freq1 * 5.7)) / 3;
+      
+      const noise2 = (Math.sin((uv - movement + noiseOffset) * freq2 * 2 + noise1 * 0.3) + 
+                     Math.sin((uv - movement + noiseOffset) * freq2 * 3.1 + noise1 * 0.3) + 
+                     Math.sin((uv - movement + noiseOffset) * freq2 * 5.7 + noise1 * 0.3)) / 3;
+      
+      // Normalize to 0-1 range
+      const t = (noise2 + 1) / 2;
+      
+      const beige = new THREE.Color(0.96, 0.87, 0.70);
+      const emerald = new THREE.Color(0.314, 0.784, 0.471);
+      
+      // Mix colors based on noise
+      const finalColor = beige.clone().lerp(emerald, t);
+      
+      // Add slight brightness variation
+      const brightness = 1.0 + noise1 * 0.1;
+      finalColor.multiplyScalar(brightness);
+      
+      textRef.current.color = finalColor;
+    }
+  });
+
+  return (
+    <Text
+      ref={textRef}
+      position={position}
+      fontSize={0.136}
+      maxWidth={0.9}
+      lineHeight={1.44}
+      textAlign="center"
+      anchorX="center"
+      anchorY="middle"
+      renderOrder={10}
+      depthTest={false}
+      depthWrite={false}
+    >
+      {text}
+    </Text>
+  );
+}
+
 function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef }) {
   const texture = useLoader(TextureLoader, "/textures/bluewood.jpg");
   const groupRef = useRef();
@@ -238,18 +366,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       groupRef.current = node;
       if (doorRef) doorRef(node);
     }} position={pos}>
-      <Text
-        position={[0.6, 0, -0.3]}
-        fontSize={0.136}
-        color="white"
-        maxWidth={0.05}
-        lineHeight={1.44}
-        textAlign="center"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {choice.text}
-      </Text>
+      <ShaderTextPlane text={choice.text} position={[0.6, 0, -0.3]} />
 
       <mesh
         position={[0.48, 0, 0.05]}
@@ -258,7 +375,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
         onPointerOut={() => setHovered(null)}
       >
         <boxGeometry args={[0.96, 1.92, 0.2]} />
-        <meshBasicMaterial transparent opacity={0} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       <animated.group rotation={rot}>

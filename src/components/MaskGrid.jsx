@@ -1,12 +1,12 @@
 import React from 'react';
 
-export default function MaskGrid({ choices }) {
+export default function MaskGrid({ choices = [] }) {
   const tileSize = 96;
   const totalTiles = 20;
 
   const fragments = Array.from({ length: totalTiles }, (_, i) => {
-    const choice = choices[i];
-    if (choice === 0 || choice === 1 || choice === 2) {
+    const choice = choices[i]?.index;
+    if (choice !== undefined && [0, 1, 2].includes(choice)) {
       const questionNum = i + 1;
       const letter = ['a', 'b', 'c'][choice];
       return `${questionNum}${letter}.png`;
@@ -16,6 +16,7 @@ export default function MaskGrid({ choices }) {
 
   return (
     <div
+      className="mask-grid"
       style={{
         position: 'fixed',
         top: 24,
@@ -46,7 +47,6 @@ export default function MaskGrid({ choices }) {
         >
           {filename ? (
             <img
-              key={filename}
               src={`/maskfrags/${filename}`}
               alt=""
               style={{
@@ -91,4 +91,118 @@ export default function MaskGrid({ choices }) {
       </style>
     </div>
   );
+}
+
+export async function downloadMaskGrid(choices) {
+  console.log('=== Starting downloadMaskGrid ===');
+  console.log('Choices:', choices);
+  
+  try {
+    const cols = 4;
+    const rows = 5;
+    const tile = 96;
+    const W = cols * tile;
+    const H = rows * tile;
+
+    if (!choices || !Array.isArray(choices)) {
+      console.error('downloadMaskGrid: invalid choices');
+      alert('Invalid choices data');
+      return;
+    }
+
+    // Build export canvas
+    const scale = 2;
+    const out = document.createElement('canvas');
+    out.width = W * scale;
+    out.height = H * scale;
+    const ctx = out.getContext('2d');
+
+    // Background to match UI
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, W * scale, H * scale);
+
+    console.log(`Canvas created: ${out.width}x${out.height}`);
+
+    // Collect images to load
+    const imagesToLoad = [];
+    for (let i = 0; i < rows * cols; i++) {
+      const v = choices[i];
+      const idx = typeof v === 'number' ? v : v?.index;
+      if (idx === 0 || idx === 1 || idx === 2) {
+        const q = i + 1;
+        const letter = ['a','b','c'][idx];
+        const src = `/maskfrags/${q}${letter}.png`;
+        imagesToLoad.push({ i, src });
+      }
+    }
+
+    console.log(`Will load ${imagesToLoad.length} images:`, imagesToLoad.map(x => x.src));
+
+    if (imagesToLoad.length === 0) {
+      alert('No mask fragments to download. Make sure you have made some choices!');
+      return;
+    }
+
+    // Load all images
+    const loadedImages = await Promise.all(
+      imagesToLoad.map(({ i, src }) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            console.log('✓ Loaded:', src);
+            resolve({ i, img, success: true });
+          };
+          img.onerror = (e) => {
+            console.error('✗ Failed:', src, e);
+            resolve({ i, img: null, success: false });
+          };
+          img.src = src;
+        })
+      )
+    );
+
+    const successfulImages = loadedImages.filter(x => x.success);
+    console.log(`Successfully loaded ${successfulImages.length}/${imagesToLoad.length} images`);
+
+    if (successfulImages.length === 0) {
+      alert('Failed to load any mask images. Check the console for details.');
+      return;
+    }
+
+    // Draw images on canvas
+    successfulImages.forEach(({ i, img }) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const dx = col * tile * scale;
+      const dy = row * tile * scale;
+      
+      ctx.drawImage(img, dx, dy, tile * scale, tile * scale);
+      console.log(`Drew image at position (${col}, ${row})`);
+    });
+
+    console.log('All images drawn. Creating blob...');
+
+    // Download
+    out.toBlob((blob) => {
+      if (!blob) {
+        console.error('Failed to create blob');
+        alert('Failed to create download blob');
+        return;
+      }
+      
+      console.log('Blob created, size:', blob.size, 'bytes');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'final_mask.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log('=== Download complete ===');
+    }, 'image/png');
+  } catch (e) {
+    console.error('downloadMaskGrid failed:', e);
+    alert('Error creating mask download: ' + e.message);
+  }
 }
