@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import scenarioData from './data/scenarios.json';
 import ScenarioScene from './components/ScenarioScene';
+import IntroductionScreen from './components/IntroductionScreen';
 
 import { getMaskFragments } from './logic/getMaskFragments';
 import MaskGrid from './components/MaskGrid';
@@ -41,6 +42,7 @@ function App() {
   };
 
   const [choices, setChoices] = useState([]);
+  const [gameStarted, setGameStarted] = useState(false);
 
   const currentIndex = choices.length;
   const gameOver = currentIndex >= scenarioData.length;
@@ -60,20 +62,29 @@ function App() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black text-white overflow-hidden">
+    <div className="fixed inset-0 text-white overflow-hidden" style={{ backgroundColor: 'rgb(128, 102, 179)' }}>
   
-      <div className="absolute top-4 right-4 z-10">
-        <MaskGrid choices={choices} />
-      </div>
-  
-      {!gameOver ? (
-        <ScenarioScene
-        scenario={scenarioData[currentIndex]}
-        onChoice={handleChoice}
-        choices={choices}
-      />      
+      {!gameStarted ? (
+        <IntroductionScreen onStart={() => setGameStarted(true)} />
       ) : (
-        <EndScreen choices={choices} archetype={finalBadge} />
+        <>
+          <div className="absolute top-4 right-4 z-10">
+            <MaskGrid choices={choices} />
+          </div>
+  
+          {!gameOver ? (
+            <ScenarioScene
+              scenario={scenarioData[currentIndex]}
+              onChoice={handleChoice}
+              choices={choices}
+              gameStarted={gameStarted}
+              setGameStarted={setGameStarted}
+              onGameStart={() => setGameStarted(true)}
+            />      
+          ) : (
+            <EndScreen choices={choices} archetype={finalBadge} />
+          )}
+        </>
       )}
     </div>
   ); 

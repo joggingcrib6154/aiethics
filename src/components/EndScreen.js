@@ -4,6 +4,7 @@ import BackgroundShaders from './BackgroundShaders';
 import MaskGrid, { downloadMaskGrid } from './MaskGrid';
 import { motion } from 'framer-motion';
 import html2canvas from 'html2canvas';
+import ShaderLabel from './ShaderLabel';
 
 function EndScreen({ choices = [], archetype = '' }) {
   const maskGridRef = useRef(null);
@@ -94,12 +95,12 @@ function EndScreen({ choices = [], archetype = '' }) {
     await downloadMaskGrid(enrichedChoices);
   };
 
-  // Helper to get tag label and color
+  // Helper to get tag label and color type
   const getTagLabel = (tag) => {
-    if (tag === 'green') return { label: 'Ethical', color: '#22c55e' }; // lighter green
-    if (tag === 'yellow') return { label: 'Neutral', color: '#3b82f6' }; // lighter blue
-    if (tag === 'red') return { label: 'Unethical', color: '#dc2626' }; // lighter red
-    return { label: 'Unknown', color: '#999999' };
+    if (tag === 'green') return { label: 'Ethical', colorType: 'green' };
+    if (tag === 'yellow') return { label: 'Neutral', colorType: 'blue' };
+    if (tag === 'red') return { label: 'Unethical', colorType: 'red' };
+    return { label: 'Unknown', colorType: 'green' };
   };
 
   return (
@@ -157,7 +158,9 @@ function EndScreen({ choices = [], archetype = '' }) {
           }}
         >
           {enrichedChoices.map((choice, index) => {
-            const { label, color } = getTagLabel(choice.tag);
+            const { label, colorType } = getTagLabel(choice.tag);
+            // Get static color for the dot (dark colors)
+            const dotColor = colorType === 'green' ? '#006600' : colorType === 'blue' ? '#000080' : '#800000';
             return (
               <motion.div
                 key={index}
@@ -190,15 +193,21 @@ function EndScreen({ choices = [], archetype = '' }) {
                       width: '14px',
                       height: '14px',
                       borderRadius: '50%',
-                      backgroundColor: color,
+                      backgroundColor: dotColor,
                       flexShrink: 0,
                     }}
                   />
-                  <span style={{ fontSize: '0.85rem', color: color, fontWeight: 600 }}>{label}</span>
+                  <ShaderLabel 
+                    text={label} 
+                    colorType={colorType}
+                    style={{ fontSize: '0.85rem', fontWeight: 600 }}
+                  />
                 </div>
-                <span style={{ fontSize: '0.8rem', color: color, marginTop: '-0.2rem' }}>
-                  Your choice: {choice.answer || choice.text || choice.choice || choice.answerText || 'No choice recorded'}
-                </span>
+                <ShaderLabel 
+                  text={`Your choice: ${choice.answer || choice.text || choice.choice || choice.answerText || 'No choice recorded'}`}
+                  colorType={colorType}
+                  style={{ fontSize: '0.8rem', marginTop: '-0.2rem' }}
+                />
               </motion.div>
             );
           })}

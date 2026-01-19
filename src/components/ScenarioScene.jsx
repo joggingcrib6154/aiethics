@@ -1,4 +1,5 @@
-import ShaderText from './ShaderText';import React, { useState, useRef, Suspense, useEffect, useMemo } from "react";
+import ShaderText from './ShaderText';
+import React, { useState, useRef, Suspense, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { TextureLoader, Vector3 } from "three";
 import * as THREE from "three";
@@ -156,137 +157,6 @@ const fragmentShader = `
   }
 `;
 
-const startButtonShaderVertex = `
-  varying vec2 v_uv;
-  void main() {
-    v_uv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-  }
-`;
-
-const startButtonShaderFragment = `
-glsl
-precision mediump float;
-
-uniform float u_time;
-uniform vec2 u_mouse;
-uniform vec2 u_resolution;
-varying vec2 v_uv;
-
-#define PI 3.14159265359
-
-// Simplex noise functions
-vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
-
-float snoise(vec2 v) {
-    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-                        -0.577350269189626, 0.024390243902439);
-    vec2 i  = floor(v + dot(v, C.yy));
-    vec2 x0 = v -   i + dot(i, C.xx);
-    vec2 i1;
-    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-    vec4 x12 = x0.xyxy + C.xxzz;
-    x12.xy -= i1;
-    i = mod289(i);
-    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0))
-        + i.x + vec3(0.0, i1.x, 1.0));
-    vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy),
-        dot(x12.zw, x12.zw)), 0.0);
-    m = m*m;
-    m = m*m;
-    vec3 x = 2.0 * fract(p * C.www) - 1.0;
-    vec3 h = abs(x) - 0.5;
-    vec3 ox = floor(x + 0.5);
-    vec3 a0 = x - ox;
-    m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
-    vec3 g;
-    g.x = a0.x * x0.x + h.x * x0.y;
-    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-    return 130.0 * dot(m, g);
-}
-
-float fbm(vec2 p) {
-    float sum = 0.0;
-    float amp = 1.0;
-    float freq = 1.0;
-    // More octaves for more detail
-    for(int i = 0; i < 6; i++) {
-        sum += amp * snoise(p * freq);
-        freq *= 2.0;
-        amp *= 0.5;
-    }
-    return sum;
-}
-
-void main() {
-    // Correct aspect ratio
-    vec2 uv = v_uv;
-    uv.x *= u_resolution.x / u_resolution.y;
-    
-    // Mouse influence
-    float mouseInfluence = 0.0;
-    float mouseDistance = length(uv - vec2(u_mouse.x * u_resolution.x / u_resolution.y, u_mouse.y));
-    mouseInfluence = smoothstep(0.5, 0.0, mouseDistance);
-    
-    // Background - indigo sky
-    vec3 indigoSky = vec3(0.18, 0.15, 0.35);
-    vec3 deepIndigo = vec3(0.05, 0.05, 0.2);
-    
-    // Create stars
-    float stars = 0.0;
-    for (int i = 0; i < 3; i++) {
-        float scale = pow(2.0, float(i));
-        stars += smoothstep(0.95, 1.0, snoise(uv * 100.0 * scale + u_time * 0.01)) * (1.0 / scale);
-    }
-    
-    // Aurora colors
-    vec3 teal = vec3(0.0, 0.8, 0.8);
-    vec3 emerald = vec3(0.0, 0.8, 0.4);
-    
-    // Create aurora effect
-    float time = u_time * 0.1;
-    float auroraBase = fbm(vec2(uv.x * 2.0, time * 0.2)) * 0.5 + 0.5;
-    
-    // Make the aurora move
-    float yOffset = auroraBase * 0.4 - 0.1;
-    yOffset += mouseInfluence * 0.15; // Aurora moves down with mouse
-    
-    // Intensity decreases as we move down from the top
-    float auroraIntensity = smoothstep(0.0, 0.8, 1.0 - (uv.y - yOffset) * (1.0 + mouseInfluence));
-    
-    // Add some variation to the aurora
-    float auroraDetail = fbm(vec2(uv.x * 5.0 + time, uv.y * 20.0)) * 0.1;
-    auroraIntensity *= (1.0 + auroraDetail);
-    
-    // Add waves to the aurora
-    float waves = sin(uv.x * 10.0 + time * 2.0) * 0.05 + 
-                 sin(uv.x * 5.0 - time * 1.5) * 0.05;
-    auroraIntensity *= (1.0 + waves);
-    
-    // Mouse makes the aurora more vibrant
-    auroraIntensity *= (1.0 + mouseInfluence * 0.5);
-    
-    // Mix the teal and emerald colors
-    float colorMix = sin(uv.x * 3.0 + time) * 0.5 + 0.5;
-    vec3 auroraColor = mix(teal, emerald, colorMix);
-    
-    // Add some glow
-    float glow = smoothstep(0.0, 0.5, auroraIntensity) * 0.5;
-    
-    // Combine everything
-    vec3 finalColor = mix(deepIndigo, indigoSky, uv.y);
-    finalColor += stars * vec3(1.0, 1.0, 1.0) * (1.0 - auroraIntensity * 0.5);
-    finalColor += auroraColor * auroraIntensity;
-    finalColor += glow * auroraColor;
-    
-    gl_FragColor = vec4(finalColor, 1.0);
-    
-    #include <colorspace_fragment>
-}
-
-`;
 
 function ShaderTextPlane({ text, position }) {
   const textRef = useRef();
@@ -336,9 +206,9 @@ function ShaderTextPlane({ text, position }) {
     <Text
       ref={textRef}
       position={position}
-      fontSize={0.136}
-      maxWidth={0.9}
-      lineHeight={1.44}
+      fontSize={0.10}
+      maxWidth={0.7}
+      lineHeight={1.2}
       textAlign="center"
       anchorX="center"
       anchorY="middle"
@@ -366,7 +236,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       groupRef.current = node;
       if (doorRef) doorRef(node);
     }} position={pos}>
-      <ShaderTextPlane text={choice.text} position={[0.6, 0, -0.3]} />
+      <ShaderTextPlane text={choice.text} position={[0.48, 0, -0.2]} />
 
       <mesh
         position={[0.48, 0, 0.05]}
@@ -388,10 +258,9 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
   );
 }
 
-function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices, setShowWormhole, doorRefs, gameStarted, setGameStarted }) {
+function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices, setShowWormhole, doorRefs, gameStarted }) {
   const { camera } = useThree();
   const initialQuat = useRef();
-  const startPlaneRef = useRef();
 
   useEffect(() => {
     camera.lookAt(0, 4, -1);
@@ -507,15 +376,10 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
         }
       }
 
-      if (!gameStarted && startPlaneRef.current) {
-        startPlaneRef.current.material.uniforms.u_time.value = state.clock.elapsedTime;
-        startPlaneRef.current.material.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
-        startPlaneRef.current.material.uniforms.u_mouse.value = new THREE.Vector2(state.mouse.x * window.innerWidth * 0.5 + window.innerWidth * 0.5, -state.mouse.y * window.innerHeight * 0.5 + window.innerHeight * 0.5);
-      }
     });
 
 
-  const MOVE_TO_CENTER_DURATION = 600;
+  const MOVE_TO_CENTER_DURATION = 300;
 
   function handleDoorClick(i) {
     if (i === 1) {
@@ -571,7 +435,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
       {!backgroundHidden && (
         <group renderOrder={5}>
           <Text
-            position={[0, 5.2, -2]}
+            position={[0, 4.5, -2]}
             fontSize={0.28}
             color="white"
             anchorX="center"
@@ -583,7 +447,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
             {scenario.title}
           </Text>
           <Text
-            position={[0, 4.8, -2]}
+            position={[0, 4.1, -2]}
             fontSize={0.16}
             maxWidth={6}
             color="white"
@@ -595,40 +459,6 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
           >
             {scenario.description}
           </Text>
-
-          {!gameStarted && (
-            <mesh
-              ref={startPlaneRef}
-              position={[0, 4, -2]}
-              onClick={(e) => {
-                e.stopPropagation();
-                setGameStarted(true);
-              }}
-            >
-              <planeGeometry args={[20, 20]} />
-              <shaderMaterial
-                uniforms={{
-                  u_time: { value: 0 },
-                  u_mouse: { value: new THREE.Vector2() },
-                  u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-                }}
-                vertexShader={startButtonShaderVertex}
-                fragmentShader={startButtonShaderFragment}
-                side={THREE.DoubleSide}
-              />
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={0.1}
-                color="black"
-                anchorX="center"
-                anchorY="middle"
-                depthTest={false}
-                depthWrite={false}
-              >
-                Click Anywhere to Start
-              </Text>
-            </mesh>
-          )}
 
           {scenario.choices.map((choice, i) => {
             if (movingDoorIndex !== null && i !== movingDoorIndex) return null;
@@ -655,11 +485,10 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   );
 }
 
-export default function ScenarioScene({ scenario, choices, onChoice }) {
+export default function ScenarioScene({ scenario, choices, onChoice, gameStarted }) {
   const [maskAnimateTo, setMaskAnimateTo] = useState({ top: 0, right: 0, scale: 0.5 });
   const [showMaskGrid, setShowMaskGrid] = useState(false);
   const [showWormhole, setShowWormhole] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
   const doorRefs = useRef([]);
   return (
     <div className="canvas-container" style={{ width: "100vw", height: "100vh", position: 'relative' }}>
@@ -679,7 +508,6 @@ export default function ScenarioScene({ scenario, choices, onChoice }) {
             setShowWormhole={setShowWormhole}
             doorRefs={doorRefs}
             gameStarted={gameStarted}
-            setGameStarted={setGameStarted}
           />
           <WormholeEffect doorRefs={doorRefs} active={true} visible={showWormhole} />
         </Suspense>
