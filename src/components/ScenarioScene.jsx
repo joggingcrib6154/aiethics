@@ -352,7 +352,7 @@ function ShaderTextPlane({ text, position }) {
 }
 
 function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef }) {
-  const texture = useLoader(TextureLoader, "/textures/bluewood.jpg");
+  const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
   const groupRef = useRef();
 
   const { pos, rot } = useSpring({
@@ -366,7 +366,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       groupRef.current = node;
       if (doorRef) doorRef(node);
     }} position={pos}>
-      <ShaderTextPlane text={choice.text} position={[0.6, 0, -0.3]} />
+      <ShaderTextPlane text={choice.text} position={[0.72, 0, -0.3]} />
 
       <mesh
         position={[0.48, 0, 0.05]}
@@ -374,13 +374,13 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
         onPointerOver={() => setHovered(index)}
         onPointerOut={() => setHovered(null)}
       >
-        <boxGeometry args={[0.96, 1.92, 0.2]} />
+        <boxGeometry args={[1.3, 2.6, 0.2]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       <animated.group rotation={rot}>
         <mesh position={[0.48, 0, 0]}>
-          <boxGeometry args={[1.1, 2.2, 0.1]} />
+          <boxGeometry args={[1.45, 2.9, 0.1]} />
           <meshStandardMaterial map={texture} />
         </mesh>
       </animated.group>
@@ -416,10 +416,10 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   const ZOOM_SPEED = 5;
 
 
-  const defaultPos = new Vector3(0, 1.6, 6);
-  const defaultLook = new Vector3(0, 1.6, 0);
+  const defaultPos = new Vector3(0, 0.9, 6);
+  const defaultLook = new Vector3(0, 0.9, 0);
   const spacing = 3.6;
-  const y = 1.6;
+  const y = 0.9;
 
   const originalDoorPositions = scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
@@ -571,7 +571,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
       {!backgroundHidden && (
         <group renderOrder={5}>
           <Text
-            position={[0, 5.2, -2]}
+            position={[0, 4.4, -2]}
             fontSize={0.28}
             color="white"
             anchorX="center"
@@ -583,7 +583,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
             {scenario.title}
           </Text>
           <Text
-            position={[0, 4.8, -2]}
+            position={[0, 4.0, -2]}
             fontSize={0.16}
             maxWidth={6}
             color="white"
@@ -599,7 +599,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
           {!gameStarted && (
             <mesh
               ref={startPlaneRef}
-              position={[0, 4, -2]}
+              position={[0, 3.6, -2]}
               onClick={(e) => {
                 e.stopPropagation();
                 setGameStarted(true);
