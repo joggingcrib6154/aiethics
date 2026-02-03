@@ -47,7 +47,7 @@ export default function MaskGrid({ choices = [] }) {
         >
           {filename ? (
             <img
-              src={`/maskfrags/${filename}`}
+              src={`/aiethics/maskfrags/${filename}`}
               alt=""
               style={{
                 width: '100%',
@@ -134,7 +134,7 @@ export async function downloadMaskGrid(choices) {
       if (idx === 0 || idx === 1 || idx === 2) {
         const q = i + 1;
         const letter = ['a','b','c'][idx];
-        const src = `/maskfrags/${q}${letter}.png`;
+        const src = `/aiethics/maskfrags/${q}${letter}.png`;
         imagesToLoad.push({ i, src });
       }
     }

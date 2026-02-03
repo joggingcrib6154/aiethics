@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 function Door({ position = [0, 0, 0], onClick }) {
   const [hovered, setHovered] = useState(false);
-  const texture = useLoader(THREE.TextureLoader, '/textures/wood.jpg');
+  const texture = useLoader(THREE.TextureLoader, '/aiethics/textures/wood.jpg');
 
   const { rotation } = useSpring({
     rotation: hovered ? [0, -0.3, 0] : [0, 0, 0],

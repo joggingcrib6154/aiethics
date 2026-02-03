@@ -25,7 +25,7 @@
     "prebuild": "cp index.html public/index.html",
     "start": "react-scripts start",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
-    "postbuild": "cp -f build/index.html index.html",
+    "postbuild": "node format-html.js && rm -f public/index.html",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

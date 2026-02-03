@@ -158,11 +158,28 @@ const fragmentShader = `
 `;
 
 
-function ShaderTextPlane({ text, position }) {
+function ShaderTextPlane({ text, position, isHovered = false }) {
   const textRef = useRef();
   const { mouse } = useThree();
   const timeRef = useRef(0);
   const noiseOffset = useMemo(() => Math.random() * 100, []); // Each text gets unique noise
+  const waveStartTimeRef = useRef(null);
+  const hasPlayedWaveRef = useRef(false);
+
+  // tracking hover for wave effect with delay
+  useEffect(() => {
+    if (isHovered && !hasPlayedWaveRef.current) {
+      // starting wave 0.5 seconds after hover
+      const delayTimer = setTimeout(() => {
+        hasPlayedWaveRef.current = true;
+      }, 500);
+      return () => clearTimeout(delayTimer);
+    } else if (!isHovered) {
+      // resetting wave when unhovered
+      waveStartTimeRef.current = null;
+      hasPlayedWaveRef.current = false;
+    }
+  }, [isHovered]);
 
   useFrame((state) => {
     timeRef.current = state.clock.elapsedTime;
@@ -170,6 +187,11 @@ function ShaderTextPlane({ text, position }) {
     if (textRef.current) {
       const time = timeRef.current * 0.2;
       const uv = 0.5; // Use center point for color
+      
+      // setting wave start time on hover
+      if (isHovered && waveStartTimeRef.current === null && hasPlayedWaveRef.current) {
+        waveStartTimeRef.current = state.clock.elapsedTime;
+      }
       
       // Recreate the fbm noise effect
       const movement = time * 0.1;
@@ -192,11 +214,44 @@ function ShaderTextPlane({ text, position }) {
       const emerald = new THREE.Color(0.314, 0.784, 0.471);
       
       // Mix colors based on noise
-      const finalColor = beige.clone().lerp(emerald, t);
+      let baseColor = beige.clone().lerp(emerald, t);
       
-      // Add slight brightness variation
-      const brightness = 1.0 + noise1 * 0.1;
-      finalColor.multiplyScalar(brightness);
+      // silver wave effect on hover sweeping left to right
+      const silverColor = new THREE.Color(0.85, 0.85, 0.9);
+      let finalColor = baseColor.clone();
+      
+      if (isHovered && waveStartTimeRef.current !== null) {
+        const waveElapsed = state.clock.elapsedTime - waveStartTimeRef.current;
+        const waveDuration = 1.0;
+        const waveProgress = Math.min(waveElapsed / waveDuration, 1.0);
+        
+        // showing wave if not completed
+        if (waveProgress < 1.0) {
+          // wave sweeping left to right
+          const wavePosition = waveProgress;
+          const waveCenter = wavePosition;
+          const waveWidth = 0.4;
+          const distanceFromCenter = Math.abs(0.5 - waveCenter) / waveWidth;
+          const waveIntensity = Math.max(0, 1 - distanceFromCenter);
+          const waveOscillation = Math.sin(waveProgress * Math.PI);
+          const combinedWave = waveIntensity * waveOscillation;
+          
+          // blending base color with silver
+          finalColor = baseColor.clone().lerp(silverColor, combinedWave);
+          
+          // boosting brightness during wave
+          const brightnessBoost = 1.0 + combinedWave * 4.0;
+          finalColor.multiplyScalar(brightnessBoost);
+        } else {
+          // returning to normal color after wave
+          const brightness = 1.0 + noise1 * 0.1;
+          finalColor.multiplyScalar(brightness);
+        }
+      } else {
+        // normal brightness when not hovered
+        const brightness = 1.0 + noise1 * 0.1;
+        finalColor.multiplyScalar(brightness);
+      }
       
       textRef.current.color = finalColor;
     }
@@ -207,8 +262,8 @@ function ShaderTextPlane({ text, position }) {
       ref={textRef}
       position={position}
       fontSize={0.10}
-      maxWidth={0.7}
-      lineHeight={1.2}
+      maxWidth={0.75}
+      lineHeight={1.4}
       textAlign="center"
       anchorX="center"
       anchorY="middle"
@@ -222,7 +277,7 @@ function ShaderTextPlane({ text, position }) {
 }
 
 function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef }) {
-  const texture = useLoader(TextureLoader, "/textures/bluewood.jpg");
+  const texture = useLoader(TextureLoader, "/aiethics/textures/bluewood.jpg");
   const groupRef = useRef();
 
   const { pos, rot } = useSpring({
@@ -236,7 +291,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       groupRef.current = node;
       if (doorRef) doorRef(node);
     }} position={pos}>
-      <ShaderTextPlane text={choice.text} position={[0.48, 0, -0.2]} />
+      <ShaderTextPlane text={choice.text} position={index === 2 ? [0.65, 0, -0.25] : [0.55, 0, -0.25]} isHovered={isHovered} />
 
       <mesh
         position={[0.48, 0, 0.05]}
@@ -244,13 +299,13 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
         onPointerOver={() => setHovered(index)}
         onPointerOut={() => setHovered(null)}
       >
-        <boxGeometry args={[0.96, 1.92, 0.2]} />
+        <boxGeometry args={[1.14, 2.34, 0.2]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       <animated.group rotation={rot}>
         <mesh position={[0.48, 0, 0]}>
-          <boxGeometry args={[1.1, 2.2, 0.1]} />
+          <boxGeometry args={[1.3, 2.6, 0.1]} />
           <meshStandardMaterial map={texture} />
         </mesh>
       </animated.group>
@@ -292,8 +347,8 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
 
   const originalDoorPositions = scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
-    const x = i * spacing - ((total - 1) * spacing) / 2 - 0.4;
-    return [x, y, 0];
+    const x = i * spacing - ((total - 1) * spacing) / 2 - 0.4 - 0.15;
+    return [x, y - 0.2, 0];
   });
 
   const doorPositions = doorOverrides ? doorOverrides : originalDoorPositions;
@@ -434,33 +489,34 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
 
       {!backgroundHidden && (
         <group renderOrder={5}>
-          <Text
-            position={[0, 4.5, -2]}
-            fontSize={0.28}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            renderOrder={5}
-            depthTest={false}
-            depthWrite={false}
-          >
-            {scenario.title}
-          </Text>
-          <Text
-            position={[0, 4.1, -2]}
-            fontSize={0.16}
-            maxWidth={6}
-            color="white"
-            anchorX="center"
-            anchorY="middle"
-            renderOrder={5}
-            depthTest={false}
-            depthWrite={false}
-          >
-            {scenario.description}
-          </Text>
+          {gameStarted && (
+            <>
+              <ShaderText
+                text={scenario.title}
+                position={[0, 4.8, -2]}
+                fontSize={0.28}
+                maxWidth={8}
+                anchorX="center"
+                anchorY="middle"
+                renderOrder={5}
+                depthTest={false}
+                depthWrite={false}
+              />
+              <ShaderText
+                text={scenario.description}
+                position={[0, 4.0, -2]}
+                fontSize={0.16}
+                maxWidth={6}
+                anchorX="center"
+                anchorY="middle"
+                renderOrder={5}
+                depthTest={false}
+                depthWrite={false}
+              />
+            </>
+          )}
 
-          {scenario.choices.map((choice, i) => {
+          {gameStarted && scenario.choices.map((choice, i) => {
             if (movingDoorIndex !== null && i !== movingDoorIndex) return null;
             return (
               <Door
