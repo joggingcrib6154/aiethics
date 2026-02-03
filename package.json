@@ -2,7 +2,6 @@
   "name": "aiethics-main",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://joggingcrib6154.github.io/aiethics",
   "dependencies": {
     "@react-spring/three": "^10.0.1",
     "@react-three/drei": "^10.7.3",
@@ -21,11 +20,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "prestart": "cp index.html public/index.html",
-    "prebuild": "cp index.html public/index.html",
     "start": "react-scripts start",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
-    "postbuild": "node format-html.js && rm -f public/index.html",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

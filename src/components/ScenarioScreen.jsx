@@ -5,7 +5,7 @@ import { animated, useSpring } from "@react spring/three";
 import { Text } from "@react-three/drei";
 
 function Door({ index, originalPosition, isSolo, choice, onClick, clickedIndex, hoveredIndex, setHoveredIndex }) {
-  const texture = useLoader(TextureLoader, "/aiethics/textures/wood.jpg");
+  const texture = useLoader(TextureLoader, "/textures/wood.jpg");
 
   const isClicked = clickedIndex === index;
   const isHovered = hoveredIndex === index;

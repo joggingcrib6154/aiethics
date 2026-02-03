@@ -47,7 +47,7 @@ export default function MaskGrid({ choices = [] }) {
         >
           {filename ? (
             <img
-              src={`/aiethics/maskfrags/${filename}`}
+              src={`/maskfrags/${filename}`}
               alt=""
               style={{
                 width: '100%',
@@ -100,7 +100,7 @@ export async function downloadMaskGrid(choices) {
   try {
     const cols = 4;
     const rows = 5;
-    const tile = 96; // Original tile size in pixels
+    const tile = 96;
     const W = cols * tile;
     const H = rows * tile;
 
@@ -110,19 +110,16 @@ export async function downloadMaskGrid(choices) {
       return;
     }
 
-    // Build export canvas with higher resolution (4x scale for better quality)
-    const scale = 4;
+    // Build export canvas
+    const scale = 2;
     const out = document.createElement('canvas');
     out.width = W * scale;
     out.height = H * scale;
     const ctx = out.getContext('2d');
 
-    // Enable image smoothing for better quality
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-
-    // Transparent background (no dark background)
-    ctx.clearRect(0, 0, out.width, out.height);
+    // Background to match UI
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, W * scale, H * scale);
 
     console.log(`Canvas created: ${out.width}x${out.height}`);
 
@@ -134,7 +131,7 @@ export async function downloadMaskGrid(choices) {
       if (idx === 0 || idx === 1 || idx === 2) {
         const q = i + 1;
         const letter = ['a','b','c'][idx];
-        const src = `/aiethics/maskfrags/${q}${letter}.png`;
+        const src = `/maskfrags/${q}${letter}.png`;
         imagesToLoad.push({ i, src });
       }
     }
@@ -151,7 +148,6 @@ export async function downloadMaskGrid(choices) {
       imagesToLoad.map(({ i, src }) =>
         new Promise((resolve) => {
           const img = new Image();
-          img.crossOrigin = 'anonymous'; // Enable CORS for image manipulation
           img.onload = () => {
             console.log('✓ Loaded:', src);
             resolve({ i, img, success: true });
@@ -173,41 +169,18 @@ export async function downloadMaskGrid(choices) {
       return;
     }
 
-    // Draw images on canvas - seamlessly connected, no borders
+    // Draw images on canvas
     successfulImages.forEach(({ i, img }) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const dx = col * tile * scale;
       const dy = row * tile * scale;
       
-      // Draw image at exact position with no gaps or borders
-      // This ensures seamless connection between tiles
       ctx.drawImage(img, dx, dy, tile * scale, tile * scale);
       console.log(`Drew image at position (${col}, ${row})`);
     });
 
-    // Apply brightness enhancement to the entire canvas
-    const imageData = ctx.getImageData(0, 0, out.width, out.height);
-    const data = imageData.data;
-    
-    // Brightness multiplier (1.0 = no change, 1.2 = 20% brighter)
-    const brightnessMultiplier = 1.3;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      // Only adjust non-transparent pixels
-      if (data[i + 3] > 0) {
-        // Apply brightness to RGB channels
-        data[i] = Math.min(255, data[i] * brightnessMultiplier);     // R
-        data[i + 1] = Math.min(255, data[i + 1] * brightnessMultiplier); // G
-        data[i + 2] = Math.min(255, data[i + 2] * brightnessMultiplier); // B
-        // Alpha channel (data[i + 3]) remains unchanged
-      }
-    }
-    
-    // Put the enhanced image data back
-    ctx.putImageData(imageData, 0, 0);
-
-    console.log('All images drawn and enhanced. Creating blob...');
+    console.log('All images drawn. Creating blob...');
 
     // Download
     out.toBlob((blob) => {
@@ -221,13 +194,13 @@ export async function downloadMaskGrid(choices) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'ai_ethics_mask.png';
+      a.download = 'final_mask.png';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       console.log('=== Download complete ===');
-    }, 'image/png', 1.0); // Maximum quality
+    }, 'image/png');
   } catch (e) {
     console.error('downloadMaskGrid failed:', e);
     alert('Error creating mask download: ' + e.message);
