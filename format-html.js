@@ -3,12 +3,13 @@ const fs = require('fs');
 // Read the minified HTML from build
 const minified = fs.readFileSync('build/index.html', 'utf8');
 
-// Extract the script and link tags
-const scriptMatch = minified.match(/<script[^>]*src="([^"]*)"[^>]*><\/script>/);
-const linkMatch = minified.match(/<link[^>]*href="([^"]*\.css)"[^>]*>/);
+// Extract the script and link tags (get first unique match)
+const scriptMatches = minified.matchAll(/<script[^>]*src="([^"]*)"[^>]*><\/script>/g);
+const linkMatches = minified.matchAll(/<link[^>]*href="([^"]*\.css)"[^>]*>/g);
 
-const scriptSrc = scriptMatch ? scriptMatch[1] : '';
-const cssHref = linkMatch ? linkMatch[1] : '';
+// Get first unique script and CSS
+const scriptSrc = scriptMatches ? Array.from(scriptMatches)[0]?.[1] || '' : '';
+const cssHref = linkMatches ? Array.from(linkMatches)[0]?.[1] || '' : '';
 
 // Create formatted HTML
 const formatted = `<!DOCTYPE html>
