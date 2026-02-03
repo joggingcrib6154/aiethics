@@ -21,7 +21,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "PUBLIC_URL= react-scripts start",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
     "postbuild": "cp -r build/static . && cp -r build/maskfrags . && cp -r build/textures . && cp build/favicon.ico build/logo192.png build/logo512.png build/manifest.json . 2>/dev/null || true && cp build/index.html index.html",
     "test": "react-scripts test",
