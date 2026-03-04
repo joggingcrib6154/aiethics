@@ -391,7 +391,6 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
 function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices, setShowWormhole, doorRefs, gameStarted, setGameStarted }) {
   const { camera } = useThree();
   const initialQuat = useRef();
-  const startPlaneRef = useRef();
 
   useEffect(() => {
     camera.lookAt(0, 4, -1);
@@ -416,10 +415,10 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   const ZOOM_SPEED = 5;
 
 
-  const defaultPos = new Vector3(0, 0.9, 6);
-  const defaultLook = new Vector3(0, 0.9, 0);
+  const defaultPos = new Vector3(0, 0.45, 6);
+  const defaultLook = new Vector3(0, 0.45, 0);
   const spacing = 3.6;
-  const y = 0.9;
+  const y = 0.45;
 
   const originalDoorPositions = scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
@@ -507,11 +506,6 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
         }
       }
 
-      if (!gameStarted && startPlaneRef.current) {
-        startPlaneRef.current.material.uniforms.u_time.value = state.clock.elapsedTime;
-        startPlaneRef.current.material.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
-        startPlaneRef.current.material.uniforms.u_mouse.value = new THREE.Vector2(state.mouse.x * window.innerWidth * 0.5 + window.innerWidth * 0.5, -state.mouse.y * window.innerHeight * 0.5 + window.innerHeight * 0.5);
-      }
     });
 
 
@@ -596,40 +590,6 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
             {scenario.description}
           </Text>
 
-          {!gameStarted && (
-            <mesh
-              ref={startPlaneRef}
-              position={[0, 3.6, -2]}
-              onClick={(e) => {
-                e.stopPropagation();
-                setGameStarted(true);
-              }}
-            >
-              <planeGeometry args={[20, 20]} />
-              <shaderMaterial
-                uniforms={{
-                  u_time: { value: 0 },
-                  u_mouse: { value: new THREE.Vector2() },
-                  u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-                }}
-                vertexShader={startButtonShaderVertex}
-                fragmentShader={startButtonShaderFragment}
-                side={THREE.DoubleSide}
-              />
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={0.1}
-                color="black"
-                anchorX="center"
-                anchorY="middle"
-                depthTest={false}
-                depthWrite={false}
-              >
-                Click Anywhere to Start
-              </Text>
-            </mesh>
-          )}
-
           {scenario.choices.map((choice, i) => {
             if (movingDoorIndex !== null && i !== movingDoorIndex) return null;
             return (
@@ -659,7 +619,7 @@ export default function ScenarioScene({ scenario, choices, onChoice }) {
   const [maskAnimateTo, setMaskAnimateTo] = useState({ top: 0, right: 0, scale: 0.5 });
   const [showMaskGrid, setShowMaskGrid] = useState(false);
   const [showWormhole, setShowWormhole] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
+  const [gameStarted, setGameStarted] = useState(true);
   const doorRefs = useRef([]);
   return (
     <div className="canvas-container" style={{ width: "100vw", height: "100vh", position: 'relative' }}>
