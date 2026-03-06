@@ -336,8 +336,8 @@ function ShaderTextPlane({ text, position }) {
     <Text
       ref={textRef}
       position={position}
-      fontSize={0.136}
-      maxWidth={0.9}
+      fontSize={0.116}
+      maxWidth={0.7}
       lineHeight={1.44}
       textAlign="center"
       anchorX="center"
@@ -351,12 +351,14 @@ function ShaderTextPlane({ text, position }) {
   );
 }
 
-function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef }) {
+function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef, totalChoices }) {
   const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
   const groupRef = useRef();
+  const isRightmost = totalChoices != null && index === totalChoices - 1;
+  const textX = isRightmost ? 0.88 : 0.72;
 
   const { pos, rot } = useSpring({
-    pos: isClicked ? position : position.map(v => v * 0.8),
+    pos: isClicked ? position : [position[0] * 0.8, position[1], position[2] * 0.8],
     rot: isClicked ? [0, -3.1, 0] : isHovered ? [0, -2.88, 0] : [0, 0, 0],
     config: { mass: 1, tension: 180, friction: 20 },
   });
@@ -366,7 +368,7 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       groupRef.current = node;
       if (doorRef) doorRef(node);
     }} position={pos}>
-      <ShaderTextPlane text={choice.text} position={[0.72, 0, -0.3]} />
+      <ShaderTextPlane text={choice.text} position={[textX, 0, -0.3]} />
 
       <mesh
         position={[0.48, 0, 0.05]}
@@ -393,7 +395,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   const initialQuat = useRef();
 
   useEffect(() => {
-    camera.lookAt(0, 4, -1);
+    camera.lookAt(0, -2.2, 0);
     initialQuat.current = camera.quaternion.clone();
   }, []);
 
@@ -415,10 +417,10 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   const ZOOM_SPEED = 5;
 
 
-  const defaultPos = new Vector3(0, 0.45, 6);
-  const defaultLook = new Vector3(0, 0.45, 0);
+  const defaultPos = new Vector3(0, -2.2, 6);
+  const defaultLook = new Vector3(0, -2.2, 0);
   const spacing = 3.6;
-  const y = 0.45;
+  const y = -2.8;
 
   const originalDoorPositions = scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
@@ -528,11 +530,14 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
     setClicked(i);
     setBackgroundHidden(false);
 
+    const textX = i === scenario.choices.length - 1 ? 0.88 : 0.72;
+    const textOffsetLocal = new Vector3(textX, 0, -0.3);
+
     if (doorRefs.current[i]) {
-      const doorCenter = new Vector3();
-      doorRefs.current[i].getWorldPosition(doorCenter);
-      const offset = new Vector3(0.57, 0.5, 0); 
-      const targetPos = doorCenter.clone().add(offset);
+      const textCenterWorld = textOffsetLocal.clone();
+      doorRefs.current[i].localToWorld(textCenterWorld);
+      const offset = new Vector3(0.01, 0.01, 0);
+      const targetPos = textCenterWorld.clone().add(offset);
       const dir = targetPos.clone().sub(camera.position).normalize();
       directionRef.current = dir;
     } else {
@@ -543,9 +548,9 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
     }
 
     if (doorRefs.current[i]) {
-      const doorFrontPos = new Vector3();
-      doorRefs.current[i].getWorldPosition(doorFrontPos);
-      const projected = doorFrontPos.clone().project(camera);
+      const textCenterWorld = textOffsetLocal.clone();
+      doorRefs.current[i].localToWorld(textCenterWorld);
+      const projected = textCenterWorld.clone().project(camera);
       const leftPct = ((projected.x + 1) / 2) * 100;
       const topPct = ((-projected.y + 1) / 2) * 100;
       setMaskAnimateTo({ top: topPct + '%', left: leftPct + '%', scale: 1, right: 'auto' });
@@ -565,7 +570,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
       {!backgroundHidden && (
         <group renderOrder={5}>
           <Text
-            position={[0, 4.4, -2]}
+            position={[0, 0.72, -2]}
             fontSize={0.28}
             color="white"
             anchorX="center"
@@ -577,12 +582,13 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
             {scenario.title}
           </Text>
           <Text
-            position={[0, 4.0, -2]}
+            position={[0, 0.12, -2]}
             fontSize={0.16}
             maxWidth={6}
             color="white"
             anchorX="center"
             anchorY="middle"
+            textAlign="center"
             renderOrder={5}
             depthTest={false}
             depthWrite={false}
@@ -605,6 +611,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
                 isHovered={hovered === i}
                 setHovered={setHovered}
                 doorRef={(el) => (doorRefs.current[i] = el)}
+                totalChoices={scenario.choices.length}
               />
             );
           })}
@@ -626,7 +633,7 @@ export default function ScenarioScene({ scenario, choices, onChoice }) {
       <Canvas
         frameloop="always"
         shadows
-        camera={{ position: [0, 4, 0], fov: 30 }}
+        camera={{ position: [0, -2.2, 6], fov: 52 }}
         style={{ pointerEvents: "auto" }}
       >
         <Suspense fallback={null}>
