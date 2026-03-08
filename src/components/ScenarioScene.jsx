@@ -1,4 +1,4 @@
-import ShaderText from './ShaderText';import React, { useState, useRef, Suspense, useEffect, useMemo } from "react";
+import React, { useState, useRef, Suspense, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { TextureLoader, Vector3 } from "three";
 import * as THREE from "three";
@@ -296,38 +296,38 @@ function ShaderTextPlane({ text, position }) {
 
   useFrame((state) => {
     timeRef.current = state.clock.elapsedTime;
-    
+
     if (textRef.current) {
       const time = timeRef.current * 0.2;
       const uv = 0.5; // Use center point for color
-      
+
       // Recreate the fbm noise effect
       const movement = time * 0.1;
       const freq1 = 3.0;
       const freq2 = 2.0;
-      
+
       // Simple noise approximation using sine waves
-      const noise1 = (Math.sin((uv + movement + noiseOffset) * freq1 * 2) + 
-                     Math.sin((uv + movement + noiseOffset) * freq1 * 3.1) + 
-                     Math.sin((uv + movement + noiseOffset) * freq1 * 5.7)) / 3;
-      
-      const noise2 = (Math.sin((uv - movement + noiseOffset) * freq2 * 2 + noise1 * 0.3) + 
-                     Math.sin((uv - movement + noiseOffset) * freq2 * 3.1 + noise1 * 0.3) + 
-                     Math.sin((uv - movement + noiseOffset) * freq2 * 5.7 + noise1 * 0.3)) / 3;
-      
+      const noise1 = (Math.sin((uv + movement + noiseOffset) * freq1 * 2) +
+        Math.sin((uv + movement + noiseOffset) * freq1 * 3.1) +
+        Math.sin((uv + movement + noiseOffset) * freq1 * 5.7)) / 3;
+
+      const noise2 = (Math.sin((uv - movement + noiseOffset) * freq2 * 2 + noise1 * 0.3) +
+        Math.sin((uv - movement + noiseOffset) * freq2 * 3.1 + noise1 * 0.3) +
+        Math.sin((uv - movement + noiseOffset) * freq2 * 5.7 + noise1 * 0.3)) / 3;
+
       // Normalize to 0-1 range
       const t = (noise2 + 1) / 2;
-      
+
       const beige = new THREE.Color(0.96, 0.87, 0.70);
       const emerald = new THREE.Color(0.314, 0.784, 0.471);
-      
+
       // Mix colors based on noise
       const finalColor = beige.clone().lerp(emerald, t);
-      
+
       // Add slight brightness variation
       const brightness = 1.0 + noise1 * 0.1;
       finalColor.multiplyScalar(brightness);
-      
+
       textRef.current.color = finalColor;
     }
   });
@@ -390,14 +390,51 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
   );
 }
 
-function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices, setShowWormhole, doorRefs, gameStarted, setGameStarted }) {
+function PlaceholderDoor({ position, choice, totalChoices, index }) {
+  const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
+  const isRightmost = totalChoices != null && index === totalChoices - 1;
+  const textX = isRightmost ? 0.88 : 0.72;
+  const pos = [position[0] * 0.8, position[1], position[2] * 0.8]; // match unclicked visual state
+  return (
+    <group position={pos}>
+      <ShaderTextPlane text={choice.text} position={[textX, 0, -0.3]} />
+      <mesh position={[0.48, 0, 0]}>
+        <boxGeometry args={[1.45, 2.9, 0.1]} />
+        <meshStandardMaterial map={texture} />
+      </mesh>
+    </group>
+  );
+}
+
+const PLACEHOLDER_Z = -500;
+const ZOOM_TARGET_Z = -495;
+
+function Scene({ scenario, nextScenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices, setShowWormhole, doorRefs, gameStarted, setGameStarted }) {
   const { camera } = useThree();
   const initialQuat = useRef();
+
+  // Adjust these to control exactly where the camera physically flies to
+  const TARGET_X = 20; // Adjusted slightly to the right
+  const TARGET_Y = -35; // Adjusted further down
+
+  const zoomTargetPosition = useMemo(() => new Vector3(TARGET_X, TARGET_Y, PLACEHOLDER_Z + 6), []);
+  const placeholderPosition = useMemo(() => new Vector3(TARGET_X, TARGET_Y - (-2.2), PLACEHOLDER_Z), []);
+
+  const interactionReadyRef = useRef(false);
 
   useEffect(() => {
     camera.lookAt(0, -2.2, 0);
     initialQuat.current = camera.quaternion.clone();
   }, []);
+
+  useEffect(() => {
+    setHovered(null);
+    interactionReadyRef.current = false;
+    const t = setTimeout(() => {
+      interactionReadyRef.current = true;
+    }, 250);
+    return () => clearTimeout(t);
+  }, [scenario]);
 
   const [clicked, setClicked] = useState(null);
   const [hovered, setHovered] = useState(null);
@@ -409,106 +446,119 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
   const activeClickedRef = useRef(null);
   const [movingDoorIndex, setMovingDoorIndex] = useState(null);
   const [backgroundHidden, setBackgroundHidden] = useState(false);
+  const hasResetDoorsRef = useRef(false);
 
-  const reachedTargetTimeRef = useRef(null);
-  const overshootPositionRef = useRef(null);
   const zoomStartRef = useRef(null);
-  const ZOOM_DURATION = 1500;
-  const ZOOM_SPEED = 5;
-
+  const zoomStartPositionRef = useRef(null);
+  const handoffDoneRef = useRef(false);
+  const zoomOutStartRef = useRef(null);
+  const zoomOutStartPositionRef = useRef(null);
+  const ZOOM_DURATION = 3500;
+  const ZOOM_OUT_DURATION = 700;
+  /** When zoomed in this far, refresh and snap back to default with scene 2. */
+  const HANDOFF_PROGRESS = 0.999;
 
   const defaultPos = new Vector3(0, -2.2, 6);
   const defaultLook = new Vector3(0, -2.2, 0);
   const spacing = 3.6;
   const y = -2.8;
 
+  function easeInOutQuint(t) {
+    return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+  }
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
   const originalDoorPositions = scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
-    const x = i * spacing - ((total - 1) * spacing) / 2 - 0.4;
+    const x = i * spacing - ((total - 1) * spacing) / 2 - 0.48;
     return [x, y, 0];
   });
 
+  const placeholderDoorPositions = nextScenario
+    ? nextScenario.choices.map((_, i) => {
+      const total = nextScenario.choices.length;
+      const x = i * spacing - ((total - 1) * spacing) / 2 - 0.48;
+      return [x, y, 0];
+    })
+    : [];
+
   const doorPositions = doorOverrides ? doorOverrides : originalDoorPositions;
 
-  const CENTER_POSITION = [0, y, 0];
+  const CENTER_POSITION = [-0.48, y, 0];
 
-    useFrame((state, delta) => {
-      if (!gameStarted) return;
+  useFrame((state, delta) => {
+    if (!gameStarted) return;
 
-      if (initialQuat.current) {
-        camera.quaternion.copy(initialQuat.current);
-        camera.rotation.setFromQuaternion(initialQuat.current);
-      }
+    if (initialQuat.current) {
+      camera.quaternion.copy(initialQuat.current);
+      camera.rotation.setFromQuaternion(initialQuat.current);
+    }
 
-      if (gameStarted && activeClickedRef.current === null && !resetRef.current) {
-        const lerpAlpha = 0.05;
-        camera.position.x += (defaultPos.x - camera.position.x) * lerpAlpha;
-        camera.position.y += (defaultPos.y - camera.position.y) * lerpAlpha;
-        camera.position.z += (defaultPos.z - camera.position.z) * lerpAlpha;
-        camera.fov += (50 - camera.fov) * 0.05;
+    if (gameStarted && activeClickedRef.current === null && !resetRef.current) {
+      const lerpAlpha = 0.05;
+      camera.position.x += (defaultPos.x - camera.position.x) * lerpAlpha;
+      camera.position.y += (defaultPos.y - camera.position.y) * lerpAlpha;
+      camera.position.z += (defaultPos.z - camera.position.z) * lerpAlpha;
+      camera.fov += (52 - camera.fov) * 0.05;
+      camera.updateProjectionMatrix();
+    }
+
+    if (activeClickedRef.current !== null && directionRef.current) {
+      const now = Date.now();
+      if (!zoomStartRef.current) zoomStartRef.current = now;
+      const elapsed = now - zoomStartRef.current;
+      const rawProgress = Math.min(elapsed / ZOOM_DURATION, 1);
+      const progress = easeInOutQuint(rawProgress);
+
+      if (progress < HANDOFF_PROGRESS) {
+        const startPos = zoomStartPositionRef.current || defaultPos.clone();
+        const t = progress / HANDOFF_PROGRESS;
+        camera.position.lerpVectors(startPos, zoomTargetPosition, t);
         camera.updateProjectionMatrix();
-      }
 
-      if (activeClickedRef.current !== null && directionRef.current) {
-        const now = Date.now();
-        if (!zoomStartRef.current) zoomStartRef.current = now;
-        const elapsed = now - zoomStartRef.current;
-
-        if (elapsed < ZOOM_DURATION) {
-          const move = directionRef.current.clone().multiplyScalar(ZOOM_SPEED * delta);
-          camera.position.add(move);
-          camera.fov += (38 - camera.fov) * 0.09;
-          camera.updateProjectionMatrix();
-        } else {
-          if (!resetRef.current) {
-            resetRef.current = true;
-            zoomOutTimerRef.current = Date.now();
-            setDoorOverrides(null);
-            const finishedIndex = activeClickedRef.current;
-            activeClickedRef.current = null;
-            setClicked(null);
-            directionRef.current = null;
-            setMovingDoorIndex(null);
-            zoomStartRef.current = null;
-            if (setShowWormhole) setShowWormhole(true);
-            if (typeof onFinish === "function") onFinish(finishedIndex);
-          }
+        if (camera.position.z < -2 && !hasResetDoorsRef.current) {
+          hasResetDoorsRef.current = true;
+          setClicked(null);
+          setDoorOverrides(null);
+          setMovingDoorIndex(null);
         }
-      }
+      } else {
+        if (!handoffDoneRef.current) {
+          handoffDoneRef.current = true;
 
-      if (resetRef.current) {
-        const lerpAlpha = 0.15;
-        if (camera.position.distanceTo(defaultPos) > 0.01) {
-          camera.position.x += (defaultPos.x - camera.position.x) * lerpAlpha;
-          camera.position.y += (defaultPos.y - camera.position.y) * lerpAlpha;
-          camera.position.z += (defaultPos.z - camera.position.z) * lerpAlpha;
-        } else {
+          // Instantly snap camera back to default
           camera.position.copy(defaultPos);
-        }
-        camera.fov += (50 - camera.fov) * 0.15;
-        camera.updateProjectionMatrix();
-        if (initialQuat.current) {
-          camera.quaternion.copy(initialQuat.current);
-          camera.rotation.setFromQuaternion(initialQuat.current);
-        }
-        if (camera.position.distanceTo(defaultPos) < 0.05 && Math.abs(camera.fov - 50) < 0.5) {
-          camera.position.copy(defaultPos);
-          camera.fov = 50;
+          camera.fov = 52;
           camera.updateProjectionMatrix();
           if (initialQuat.current) {
             camera.quaternion.copy(initialQuat.current);
             camera.rotation.setFromQuaternion(initialQuat.current);
           }
+
+          setDoorOverrides(null);
+          const finishedIndex = activeClickedRef.current;
+          activeClickedRef.current = null;
+          setClicked(null);
+          directionRef.current = null;
+          setMovingDoorIndex(null);
+
+          if (typeof onFinish === "function") onFinish(finishedIndex);
+
           resetRef.current = false;
           zoomOutTimerRef.current = null;
-          setMovingDoorIndex(null);
-          setDoorOverrides(null);
-          setShowMaskGrid(true);
+          zoomOutStartRef.current = null;
+          zoomOutStartPositionRef.current = null;
+          handoffDoneRef.current = false;
+          zoomStartRef.current = null;
+
           setBackgroundHidden(false);
         }
       }
+    }
 
-    });
+  });
 
 
   const MOVE_TO_CENTER_DURATION = 600;
@@ -527,6 +577,7 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
 
   function startZoom(i) {
     activeClickedRef.current = i;
+    handoffDoneRef.current = false;
     setClicked(i);
     setBackgroundHidden(false);
 
@@ -558,7 +609,9 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
 
 
     zoomStartRef.current = null;
+    zoomStartPositionRef.current = camera.position.clone();
     resetRef.current = false;
+    hasResetDoorsRef.current = false;
   }
 
   return (
@@ -605,11 +658,15 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
                 position={doorOverrides && doorOverrides[i] ? doorOverrides[i] : doorPositions[i]}
                 choice={choice}
                 onClick={(index) => {
+                  if (!interactionReadyRef.current) return;
                   if (movingDoorIndex === null) handleDoorClick(index);
                 }}
                 isClicked={clicked === i}
-                isHovered={hovered === i}
-                setHovered={setHovered}
+                isHovered={hovered === i && clicked === null}
+                setHovered={(val) => {
+                  if (!interactionReadyRef.current) return;
+                  setHovered(val);
+                }}
                 doorRef={(el) => (doorRefs.current[i] = el)}
                 totalChoices={scenario.choices.length}
               />
@@ -618,11 +675,51 @@ function Scene({ scenario, onFinish, setMaskAnimateTo, setShowMaskGrid, choices,
         </group>
       )}
 
+      {nextScenario && (
+        <group position={placeholderPosition.toArray()} renderOrder={4}>
+          <Text
+            position={[0, 0.72, -2]}
+            fontSize={0.28}
+            color="white"
+            anchorX="center"
+            anchorY="middle"
+            renderOrder={4}
+            depthTest={true}
+            depthWrite={false}
+          >
+            {nextScenario.title}
+          </Text>
+          <Text
+            position={[0, 0.12, -2]}
+            fontSize={0.16}
+            maxWidth={6}
+            color="white"
+            anchorX="center"
+            anchorY="middle"
+            textAlign="center"
+            renderOrder={4}
+            depthTest={true}
+            depthWrite={false}
+          >
+            {nextScenario.description}
+          </Text>
+          {nextScenario.choices.map((choice, i) => (
+            <PlaceholderDoor
+              key={i}
+              index={i}
+              position={placeholderDoorPositions[i] || [0, 0, 0]}
+              choice={choice}
+              totalChoices={nextScenario.choices.length}
+            />
+          ))}
+        </group>
+      )}
+
     </>
   );
 }
 
-export default function ScenarioScene({ scenario, choices, onChoice }) {
+export default function ScenarioScene({ scenario, nextScenario, choices, onChoice }) {
   const [maskAnimateTo, setMaskAnimateTo] = useState({ top: 0, right: 0, scale: 0.5 });
   const [showMaskGrid, setShowMaskGrid] = useState(false);
   const [showWormhole, setShowWormhole] = useState(false);
@@ -639,6 +736,7 @@ export default function ScenarioScene({ scenario, choices, onChoice }) {
         <Suspense fallback={null}>
           <Scene
             scenario={scenario}
+            nextScenario={nextScenario}
             onFinish={onChoice}
             setMaskAnimateTo={setMaskAnimateTo}
             setShowMaskGrid={setShowMaskGrid}
