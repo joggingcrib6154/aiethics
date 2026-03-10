@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import scenarioData from './data/scenarios.json';
 import ScenarioScene from './components/ScenarioScene';
 import IntroductionScreen from './components/IntroductionScreen';
+import TimelineControls from './components/TimelineControls';
 
 import { getMaskFragments } from './logic/getMaskFragments';
 import MaskGrid from './components/MaskGrid';
@@ -11,8 +12,6 @@ import EndScreen from './components/EndScreen';
 
 
 function App() {
-
-  /*return <Playground />;*/
 
   // Assigns a badge based on tag counts in user choices
   const assignBadge = (choices) => {
@@ -43,13 +42,14 @@ function App() {
 
   const [choices, setChoices] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
 
-  const currentIndex = choices.length;
-  const gameOver = currentIndex >= scenarioData.length;
+  const gameOver = currentIndex >= scenarioData.length && choices.length >= scenarioData.length;
   const finalBadge = gameOver ? assignBadge(choices) : null;
 
   const handleChoice = (choiceIndex) => {
-    if (!gameOver) {
+    if (currentIndex < scenarioData.length) {
       const scenario = scenarioData[currentIndex];
       const choiceObj = {
         scenarioTitle: scenario.title,
@@ -57,37 +57,73 @@ function App() {
         tag: scenario.choices[choiceIndex].tag,
         index: choiceIndex,
       };
-      setChoices([...choices, choiceObj]);
+
+      const newChoices = [...choices];
+      newChoices[currentIndex] = choiceObj;
+      const truncated = newChoices.slice(0, currentIndex + 1);
+
+      setChoices(truncated);
+      setDirection(1);
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handleTimelineSelect = (index) => {
+    if (index < currentIndex) {
+      setDirection(-1);
+    } else {
+      setDirection(1);
+    }
+    setCurrentIndex(index);
+  }
+
+  const handleNavigate = (dir) => {
+    const newIndex = currentIndex + dir;
+    // Only go back if there's a previous scenario, or forward if the next one was already answered
+    if (dir === -1 && newIndex >= 0) {
+      setDirection(-1);
+      setCurrentIndex(newIndex);
+    } else if (dir === 1 && newIndex < choices.length) {
+      // Allow jumping forward only into already-answered scenes
+      setDirection(1);
+      setCurrentIndex(newIndex);
     }
   };
 
   return (
-    <div className="fixed inset-0 text-white overflow-hidden" style={{ backgroundColor: 'rgb(128, 102, 179)' }}>
-  
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, color: 'white', overflow: 'hidden', backgroundColor: 'rgb(128, 102, 179)' }}>
+
       {!gameStarted ? (
         <IntroductionScreen onStart={() => setGameStarted(true)} />
       ) : (
         <>
-          <div className="absolute top-4 right-4 z-10">
+          <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }}>
             <MaskGrid choices={choices} />
           </div>
-  
+
           {!gameOver ? (
-            <ScenarioScene
-              scenario={scenarioData[currentIndex]}
-              onChoice={handleChoice}
-              choices={choices}
-              gameStarted={gameStarted}
-              setGameStarted={setGameStarted}
-              onGameStart={() => setGameStarted(true)}
-            />      
+            <>
+              <ScenarioScene
+                scenario={scenarioData[currentIndex]}
+                onChoice={handleChoice}
+                choices={choices}
+                direction={direction}
+                onNavigate={handleNavigate}
+              />
+              <TimelineControls
+                total={scenarioData.length}
+                current={currentIndex}
+                maxReached={choices.length}
+                onSelect={handleTimelineSelect}
+              />
+            </>
           ) : (
             <EndScreen choices={choices} archetype={finalBadge} />
           )}
         </>
       )}
     </div>
-  ); 
+  );
 }
 
 export default App;
