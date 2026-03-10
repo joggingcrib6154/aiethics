@@ -105,6 +105,7 @@ function App() {
             <>
               <ScenarioScene
                 scenario={scenarioData[currentIndex]}
+                nextScenario={scenarioData[currentIndex + 1]}
                 onChoice={handleChoice}
                 choices={choices}
                 direction={direction}
