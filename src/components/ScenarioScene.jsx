@@ -8,22 +8,22 @@ import { Text } from "@react-three/drei";
 import MaskGrid from "./MaskGrid";
 import BackgroundShader from "./BackgroundShaders";
 
-// ─── Easing ───────────────────────────────────────────────────────────────────
+// ─── Easing helpers ───────────────────────────────────────────────────────────
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 // ─── Shader-animated text on doors ────────────────────────────────────────────
 function ShaderTextPlane({ text, position }) {
   const textRef = useRef();
   const noiseOffset = useMemo(() => Math.random() * 100, []);
-
   useFrame((state) => {
     if (!textRef.current) return;
     const time = state.clock.elapsedTime * 0.2;
-    const uv = 0.5;
-    const movement = time * 0.1;
-    const f1 = 3.0, f2 = 2.0;
+    const uv = 0.5, movement = time * 0.1, f1 = 3.0, f2 = 2.0;
     const n1 = (Math.sin((uv + movement + noiseOffset) * f1 * 2) +
       Math.sin((uv + movement + noiseOffset) * f1 * 3.1) +
       Math.sin((uv + movement + noiseOffset) * f1 * 5.7)) / 3;
@@ -35,7 +35,6 @@ function ShaderTextPlane({ text, position }) {
       .lerp(new THREE.Color(0.314, 0.784, 0.471), t)
       .multiplyScalar(1.0 + n1 * 0.1);
   });
-
   return (
     <Text ref={textRef} position={position} fontSize={0.116} maxWidth={0.7}
       lineHeight={1.44} textAlign="center" anchorX="center" anchorY="middle"
@@ -46,33 +45,33 @@ function ShaderTextPlane({ text, position }) {
 }
 
 // ─── Interactive door ─────────────────────────────────────────────────────────
+// flyOff   = non-selected door shoots off left immediately
+// flyOffSelf = selected door shoots off left once zoom begins
 function Door({ index, position, choice, onClick, isClicked, isHovered,
-  setHovered, doorRef, totalChoices, flyOff }) {
+  setHovered, doorRef, totalChoices, flyOff, flyOffSelf }) {
   const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
   const groupRef = useRef();
   const isRightmost = totalChoices != null && index === totalChoices - 1;
   const textX = isRightmost ? 0.88 : 0.72;
+  const shooting = flyOff || flyOffSelf;
 
-  // When flying off: shoot to the left; when clicked: move to position; else idle offset
-  const targetPos = flyOff
-    ? [position[0] - 22, position[1], position[2]]
+  // Priority: shoot off > centering (clicked, position = CENTER) > idle
+  const targetPos = shooting
+    ? [position[0] - 24, position[1], position[2]]
     : isClicked
-      ? position
-      : [position[0] * 0.8, position[1], position[2] * 0.8];
+      ? position                                              // centering / staying put
+      : [position[0] * 0.8, position[1], position[2] * 0.8]; // idle offset
 
   const { pos, rot } = useSpring({
     pos: targetPos,
-    rot: isClicked ? [0, -3.1, 0] : isHovered ? [0, -2.88, 0] : [0, 0, 0],
-    config: flyOff
-      ? { tension: 220, friction: 24 }      // fast snap off
+    rot: isClicked && !shooting ? [0, -3.1, 0] : isHovered ? [0, -2.88, 0] : [0, 0, 0],
+    config: shooting
+      ? { tension: 230, friction: 22 }
       : { mass: 1, tension: 180, friction: 20 },
   });
 
   return (
-    <animated.group ref={(node) => {
-      groupRef.current = node;
-      if (doorRef) doorRef(node);
-    }} position={pos}>
+    <animated.group ref={(node) => { groupRef.current = node; if (doorRef) doorRef(node); }} position={pos}>
       <ShaderTextPlane text={choice.text} position={[textX, 0, -0.3]} />
       <mesh position={[0.48, 0, 0.05]}
         onClick={() => onClick(index)}
@@ -91,12 +90,11 @@ function Door({ index, position, choice, onClick, isClicked, isHovered,
   );
 }
 
-// ─── Placeholder door (non-interactive, for next-scenario preview) ────────────
+// ─── Placeholder door (next-scenario preview, non-interactive) ────────────────
 function PlaceholderDoor({ position, choice, totalChoices, index }) {
   const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
   const isRightmost = totalChoices != null && index === totalChoices - 1;
   const textX = isRightmost ? 0.88 : 0.72;
-  // Match the idle visual offset of interactive doors
   const pos = [position[0] * 0.8, position[1], position[2] * 0.8];
   return (
     <group position={pos}>
@@ -109,19 +107,24 @@ function PlaceholderDoor({ position, choice, totalChoices, index }) {
   );
 }
 
-// ─── Animation durations ──────────────────────────────────────────────────────
-const ZOOM_DURATION = 2200; // ms — how long the full zoom+approach takes
+// ─── Constants ────────────────────────────────────────────────────────────────
+const SPACING = 3.6;
+const DOOR_Y = -2.8;
+const CENTER_X = -0.48;
+const CAM_DEFAULT = { x: 0, y: -2.2, z: 6 };
+const CAM_PEAK_Z = 0.5;   // how far in camera zooms (past the door plane)
+const FOV_DEFAULT = 52;
+const FOV_PEAK = 44;
+const NEXT_START_Z = -500; // invisible at idle distance
+// Phase durations (ms)
+const PHASE1_DUR = 2500;   // camera zooms in + content rushes from -500 to -5
+const PHASE2_DUR = 2000;   // camera zooms out + content closes last 5 units
 
-// ─── 3-D Scene for one scenario ───────────────────────────────────────────────
+// ─── 3-D Scene ────────────────────────────────────────────────────────────────
 function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
   const { camera } = useThree();
   const initialQuat = useRef();
 
-  // Saved starting camera to lerp from
-  const camStartPos = useRef({ x: 0, y: -2.2, z: 6 });
-  const camStartFov = useRef(52);
-
-  // After scene change, prevent clicks for a moment
   const interactionReadyRef = useRef(false);
   useEffect(() => {
     interactionReadyRef.current = false;
@@ -130,108 +133,132 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
   }, [scenario]);
 
   useEffect(() => {
-    camera.lookAt(0, -2.2, 0);
+    camera.lookAt(0, CAM_DEFAULT.y, 0);
     initialQuat.current = camera.quaternion.clone();
   }, [camera]);
 
-  // Door state
-  const [clickedDoor, setClickedDoor] = useState(null);   // opens (swings)
-  const [flyingOff, setFlyingOff] = useState(false);      // non-clicked doors shoot left
+  // ── door state ──────────────────────────────────────────────────────────────
+  const [clickedDoor, setClickedDoor] = useState(null);
+  const [flyOffOthers, setFlyOffOthers] = useState(false);
+  const [flyOffSelected, setFlyOffSelected] = useState(false);
   const [hovered, setHovered] = useState(null);
+  const [doorOverrides, setDoorOverrides] = useState(null);
 
-  // Animation state (all in refs for useFrame)
-  const animPhaseRef = useRef('idle');   // 'idle' | 'animating' | 'done'
-  const animStartRef = useRef(null);
+  // ── animation refs ──────────────────────────────────────────────────────────
+  // phase: 'idle' | 'centering' | 'phase1' | 'phase2' | 'done'
+  const phaseRef = useRef('idle');
+  const phase1StartRef = useRef(null);
+  const phase2StartRef = useRef(null);
   const handoffDoneRef = useRef(false);
   const selectedRef = useRef(null);
-
-  // Ref to the "next scenario" group so we can imperatively move it
+  const flyOffSelfFiredRef = useRef(false);
   const nextGroupRef = useRef();
 
-  const spacing = 3.6;
-  const y = -2.8;
-  const defaultCamZ = 6;
-  const targetCamZ = 2.5;   // zoom-in camera Z
-  const targetFov = 42;
-  const nextStartZ = -45;   // where next-scenario group begins (far behind)
-  const nextEndZ = 0;       // where it ends up (exactly where current scene lives)
-
+  // Door positions for current scenario
   const doorPositions = useMemo(() => scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
-    const x = i * spacing - ((total - 1) * spacing) / 2 - 0.48;
-    return [x, y, 0];
+    const x = i * SPACING - ((total - 1) * SPACING) / 2 + CENTER_X;
+    return [x, DOOR_Y, 0];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [scenario]);
 
+  // Door positions for next scenario (same layout, offset inside the group)
   const nextDoorPositions = useMemo(() => nextScenario
     ? nextScenario.choices.map((_, i) => {
       const total = nextScenario.choices.length;
-      const x = i * spacing - ((total - 1) * spacing) / 2 - 0.48;
-      return [x, y, 0];
+      const x = i * SPACING - ((total - 1) * SPACING) / 2 + CENTER_X;
+      return [x, DOOR_Y, 0];
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     : [], [nextScenario]);
 
-  // ── per-frame animation ────────────────────────────────────────────────────
+  // ── useFrame ─────────────────────────────────────────────────────────────────
   useFrame(() => {
-    // Always lock look direction
+    // Keep look direction locked
     if (initialQuat.current) {
       camera.quaternion.copy(initialQuat.current);
       camera.rotation.setFromQuaternion(initialQuat.current);
     }
 
-    if (animPhaseRef.current === 'idle') {
-      // Gently float back to default if not animating
-      camera.position.x += (0 - camera.position.x) * 0.05;
-      camera.position.y += (-2.2 - camera.position.y) * 0.05;
-      camera.position.z += (defaultCamZ - camera.position.z) * 0.05;
-      camera.fov += (52 - camera.fov) * 0.05;
+    // Idle: float back to default
+    if (phaseRef.current === 'idle' || phaseRef.current === 'centering') {
+      camera.position.x += (CAM_DEFAULT.x - camera.position.x) * 0.05;
+      camera.position.y += (CAM_DEFAULT.y - camera.position.y) * 0.05;
+      camera.position.z += (CAM_DEFAULT.z - camera.position.z) * 0.05;
+      camera.fov += (FOV_DEFAULT - camera.fov) * 0.05;
       camera.updateProjectionMatrix();
       return;
     }
 
-    if (animPhaseRef.current === 'animating') {
-      if (!animStartRef.current) {
-        animStartRef.current = Date.now();
-        // Snapshot camera starting position for smooth lerp
-        camStartPos.current = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
-        camStartFov.current = camera.fov;
-      }
+    // ── Phase 1: zoom camera IN, content rushes from -500 to -5 ──────────────
+    if (phaseRef.current === 'phase1') {
+      if (!phase1StartRef.current) phase1StartRef.current = Date.now();
+      const elapsed = Date.now() - phase1StartRef.current;
+      const t1 = Math.min(elapsed / PHASE1_DUR, 1);
+      const e1 = easeInOutCubic(t1);
 
-      const elapsed = Date.now() - animStartRef.current;
-      const raw = Math.min(elapsed / ZOOM_DURATION, 1);
-      const t = easeInOutCubic(raw);
-
-      // Camera zooms in
-      camera.position.x = camStartPos.current.x + (0 - camStartPos.current.x) * t;
-      camera.position.y = camStartPos.current.y + (-2.2 - camStartPos.current.y) * t;
-      camera.position.z = camStartPos.current.z + (targetCamZ - camStartPos.current.z) * t;
-      camera.fov = camStartFov.current + (targetFov - camStartFov.current) * t;
+      // Camera zooms in smoothly
+      camera.position.z = THREE.MathUtils.lerp(CAM_DEFAULT.z, CAM_PEAK_Z, e1);
+      camera.fov = THREE.MathUtils.lerp(FOV_DEFAULT, FOV_PEAK, e1);
       camera.updateProjectionMatrix();
 
-      // Next-scenario content rush forward from far behind
+      // Next content rushes from -500 toward -5 (easeOut → fast start, slows near end)
       if (nextGroupRef.current) {
-        nextGroupRef.current.position.z = nextStartZ + (nextEndZ - nextStartZ) * t;
+        nextGroupRef.current.position.z = THREE.MathUtils.lerp(NEXT_START_Z, -5, easeOutCubic(t1));
       }
 
-      if (raw >= 1 && !handoffDoneRef.current) {
+      // Fire selected door fly-off at 500ms in (door has had time to swing)
+      if (!flyOffSelfFiredRef.current && elapsed > 500) {
+        flyOffSelfFiredRef.current = true;
+        setFlyOffSelected(true);
+      }
+
+      // Transition to phase 2 when camera is fully in
+      if (t1 >= 1) {
+        phaseRef.current = 'phase2';
+        phase2StartRef.current = null;
+      }
+    }
+
+    // ── Phase 2: camera zooms OUT at same rate content closes last 5 units ────
+    if (phaseRef.current === 'phase2') {
+      if (!phase2StartRef.current) phase2StartRef.current = Date.now();
+      const elapsed = Date.now() - phase2StartRef.current;
+      const t2 = Math.min(elapsed / PHASE2_DUR, 1);
+      const e2 = easeInOutCubic(t2);
+
+      // Camera retreats from peak back to default
+      camera.position.z = THREE.MathUtils.lerp(CAM_PEAK_Z, CAM_DEFAULT.z, e2);
+      camera.fov = THREE.MathUtils.lerp(FOV_PEAK, FOV_DEFAULT, e2);
+      camera.updateProjectionMatrix();
+
+      // Content closes identical easing: -5 → 0 (same duration, same curve → same visual speed)
+      if (nextGroupRef.current) {
+        nextGroupRef.current.position.z = THREE.MathUtils.lerp(-5, 0, e2);
+      }
+
+      // Handoff
+      if (t2 >= 1 && !handoffDoneRef.current) {
         handoffDoneRef.current = true;
 
-        // Snap camera back to default (invisible because React will swap scene)
-        camera.position.set(0, -2.2, defaultCamZ);
-        camera.fov = 52;
+        // Snap camera to exact default (invisible — React will swap scene)
+        camera.position.set(CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z);
+        camera.fov = FOV_DEFAULT;
         camera.updateProjectionMatrix();
         if (initialQuat.current) {
           camera.quaternion.copy(initialQuat.current);
           camera.rotation.setFromQuaternion(initialQuat.current);
         }
-
         if (nextGroupRef.current) nextGroupRef.current.position.z = 0;
 
         const chosen = selectedRef.current;
 
-        // Reset all state refs for reuse
-        animPhaseRef.current = 'idle';
-        animStartRef.current = null;
+        // Full reset
+        phaseRef.current = 'idle';
+        phase1StartRef.current = null;
+        phase2StartRef.current = null;
         handoffDoneRef.current = false;
+        flyOffSelfFiredRef.current = false;
         selectedRef.current = null;
 
         if (typeof onFinish === 'function') onFinish(chosen);
@@ -239,22 +266,40 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
     }
   });
 
-  // ── door click handler ─────────────────────────────────────────────────────
+  // ── door click handler ──────────────────────────────────────────────────────
   function handleDoorClick(i) {
     if (!interactionReadyRef.current) return;
-    if (animPhaseRef.current !== 'idle') return;
+    if (phaseRef.current !== 'idle') return;
 
     selectedRef.current = i;
-    setClickedDoor(i);       // opens this door (spring rotation)
-    setFlyingOff(true);      // other doors fly left
+    setClickedDoor(i);       // door swings open
+    setFlyOffOthers(true);   // other doors immediately fly left
     setHovered(null);
     onAnimStart && onAnimStart();
 
-    // Short pause so the door begins opening before camera moves
-    setTimeout(() => {
-      animPhaseRef.current = 'animating';
-      animStartRef.current = null;
-    }, 280);
+    const alreadyCentered = Math.abs(doorPositions[i][0] - CENTER_X) < 0.05;
+
+    if (alreadyCentered) {
+      // Center door: start zoom immediately, fly off self after 500ms
+      phaseRef.current = 'phase1';
+      phase1StartRef.current = null;
+      flyOffSelfFiredRef.current = false;
+    } else {
+      // Side door: slide to center first (600ms), then start zoom
+      phaseRef.current = 'centering';
+      setDoorOverrides(scenario.choices.map((_, j) => (j === i ? [CENTER_X, DOOR_Y, 0] : null)));
+      setTimeout(() => {
+        setDoorOverrides(null);
+        phaseRef.current = 'phase1';
+        phase1StartRef.current = null;
+        flyOffSelfFiredRef.current = false;
+      }, 600);
+    }
+  }
+
+  function resolvedPos(i) {
+    if (doorOverrides && doorOverrides[i]) return doorOverrides[i];
+    return doorPositions[i];
   }
 
   return (
@@ -272,23 +317,25 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       {/* Current scenario doors */}
       {scenario.choices.map((choice, i) => (
         <Door
-          key={i}
-          index={i}
-          position={doorPositions[i]}
+          key={i} index={i}
+          position={resolvedPos(i)}
           choice={choice}
           onClick={handleDoorClick}
           isClicked={clickedDoor === i}
           isHovered={hovered === i && clickedDoor === null}
-          flyOff={flyingOff && clickedDoor !== i}    // non-selected fly left
-          setHovered={(val) => { if (interactionReadyRef.current && animPhaseRef.current === 'idle') setHovered(val); }}
+          flyOff={flyOffOthers && i !== clickedDoor}
+          flyOffSelf={flyOffSelected && i === clickedDoor}
+          setHovered={(val) => {
+            if (interactionReadyRef.current && phaseRef.current === 'idle') setHovered(val);
+          }}
           doorRef={(el) => (doorRefs.current[i] = el)}
           totalChoices={scenario.choices.length}
         />
       ))}
 
-      {/* Next scenario content — starts far behind doors, rushes forward on click */}
+      {/* Next scenario — starts at z=-500 (invisible), rushes forward on click */}
       {nextScenario && (
-        <group ref={nextGroupRef} position={[0, 0, nextStartZ]} renderOrder={4}>
+        <group ref={nextGroupRef} position={[0, 0, NEXT_START_Z]}>
           <Text position={[0, 0.72, -2]} fontSize={0.28} color="white"
             anchorX="center" anchorY="middle" renderOrder={4} depthTest={false} depthWrite={false}>
             {nextScenario.title}
@@ -298,9 +345,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
             {nextScenario.description}
           </Text>
           {nextScenario.choices.map((choice, i) => (
-            <PlaceholderDoor
-              key={i}
-              index={i}
+            <PlaceholderDoor key={i} index={i}
               position={nextDoorPositions[i] || [0, 0, 0]}
               choice={choice}
               totalChoices={nextScenario.choices.length}
@@ -312,28 +357,21 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
   );
 }
 
-// ─── Sliding transition wrapper (for timeline nav only) ───────────────────────
+// ─── Sliding transition wrapper (timeline nav only) ───────────────────────────
 function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
   direction, skipSlide, onAnimStart }) {
   const transitions = useTransition(scenario, {
     keys: s => s.title,
-    // When triggered by a door-click (skipSlide), use immediate (no animation)
     immediate: skipSlide,
     from: { position: [direction * 18, 0, 0] },
     enter: { position: [0, 0, 0] },
     leave: { position: [-direction * 18, 0, 0] },
     config: { tension: 110, friction: 22 },
   });
-
   return transitions((style, item) => (
     <animated.group position={style.position}>
-      <Scene
-        scenario={item}
-        nextScenario={nextScenario}
-        onFinish={onFinish}
-        doorRefs={doorRefs}
-        onAnimStart={onAnimStart}
-      />
+      <Scene scenario={item} nextScenario={nextScenario} onFinish={onFinish}
+        doorRefs={doorRefs} onAnimStart={onAnimStart} />
     </animated.group>
   ));
 }
@@ -341,7 +379,7 @@ function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
 // ─── Camera initializer ───────────────────────────────────────────────────────
 function CameraController() {
   const { camera } = useThree();
-  useEffect(() => { camera.lookAt(0, -2.2, 0); }, [camera]);
+  useEffect(() => { camera.lookAt(0, CAM_DEFAULT.y, 0); }, [camera]);
   return null;
 }
 
@@ -368,10 +406,7 @@ export default function ScenarioScene({
     }
   }
 
-  function handleTouchStart(e) {
-    touchStartXRef.current = e.touches[0].clientX;
-  }
-
+  function handleTouchStart(e) { touchStartXRef.current = e.touches[0].clientX; }
   function handleTouchEnd(e) {
     if (touchStartXRef.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartXRef.current;
@@ -387,25 +422,18 @@ export default function ScenarioScene({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <Canvas
-        frameloop="always"
-        shadows
-        camera={{ position: [0, -2.2, 6], fov: 52 }}
-        style={{ pointerEvents: "auto", width: "100%", height: "100%" }}
-      >
+      <Canvas frameloop="always" shadows
+        camera={{ position: [CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z], fov: FOV_DEFAULT }}
+        style={{ pointerEvents: "auto", width: "100%", height: "100%" }}>
         <CameraController />
         <Suspense fallback={null}>
           <BackgroundShader visible={true} />
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 5, 5]} intensity={1} />
-
           <TransitionManager
-            scenario={scenario}
-            nextScenario={nextScenario}
-            onFinish={onChoice}
-            doorRefs={doorRefs}
-            direction={direction || 1}
-            skipSlide={skipSlide}
+            scenario={scenario} nextScenario={nextScenario}
+            onFinish={onChoice} doorRefs={doorRefs}
+            direction={direction || 1} skipSlide={skipSlide}
             onAnimStart={() => setIsAnimating(true)}
           />
         </Suspense>
