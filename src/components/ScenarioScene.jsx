@@ -1,6 +1,6 @@
 import React, { useState, useRef, Suspense, useMemo, useEffect } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
-import { TextureLoader, Vector3 } from "three";
+import { TextureLoader } from "three";
 import * as THREE from "three";
 import { animated, useSpring } from "@react-spring/three";
 import { useTransition } from "@react-spring/three";
@@ -8,12 +8,12 @@ import { Text } from "@react-three/drei";
 import MaskGrid from "./MaskGrid";
 import BackgroundShader from "./BackgroundShaders";
 
-// ─── Easing ──────────────────────────────────────────────────────────────────
-function easeInOutQuint(t) {
-  return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+// ─── Easing ───────────────────────────────────────────────────────────────────
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// ─── Shader Text on Doors ────────────────────────────────────────────────────
+// ─── Shader-animated text on doors ────────────────────────────────────────────
 function ShaderTextPlane({ text, position }) {
   const textRef = useRef();
   const noiseOffset = useMemo(() => Math.random() * 100, []);
@@ -23,51 +23,49 @@ function ShaderTextPlane({ text, position }) {
     const time = state.clock.elapsedTime * 0.2;
     const uv = 0.5;
     const movement = time * 0.1;
-    const freq1 = 3.0, freq2 = 2.0;
-    const noise1 = (Math.sin((uv + movement + noiseOffset) * freq1 * 2) +
-      Math.sin((uv + movement + noiseOffset) * freq1 * 3.1) +
-      Math.sin((uv + movement + noiseOffset) * freq1 * 5.7)) / 3;
-    const noise2 = (Math.sin((uv - movement + noiseOffset) * freq2 * 2 + noise1 * 0.3) +
-      Math.sin((uv - movement + noiseOffset) * freq2 * 3.1 + noise1 * 0.3) +
-      Math.sin((uv - movement + noiseOffset) * freq2 * 5.7 + noise1 * 0.3)) / 3;
-    const t = (noise2 + 1) / 2;
-    const beige = new THREE.Color(0.96, 0.87, 0.70);
-    const emerald = new THREE.Color(0.314, 0.784, 0.471);
-    const finalColor = beige.clone().lerp(emerald, t);
-    finalColor.multiplyScalar(1.0 + noise1 * 0.1);
-    textRef.current.color = finalColor;
+    const f1 = 3.0, f2 = 2.0;
+    const n1 = (Math.sin((uv + movement + noiseOffset) * f1 * 2) +
+      Math.sin((uv + movement + noiseOffset) * f1 * 3.1) +
+      Math.sin((uv + movement + noiseOffset) * f1 * 5.7)) / 3;
+    const n2 = (Math.sin((uv - movement + noiseOffset) * f2 * 2 + n1 * 0.3) +
+      Math.sin((uv - movement + noiseOffset) * f2 * 3.1 + n1 * 0.3) +
+      Math.sin((uv - movement + noiseOffset) * f2 * 5.7 + n1 * 0.3)) / 3;
+    const t = (n2 + 1) / 2;
+    textRef.current.color = new THREE.Color(0.96, 0.87, 0.70)
+      .lerp(new THREE.Color(0.314, 0.784, 0.471), t)
+      .multiplyScalar(1.0 + n1 * 0.1);
   });
 
   return (
-    <Text
-      ref={textRef}
-      position={position}
-      fontSize={0.116}
-      maxWidth={0.7}
-      lineHeight={1.44}
-      textAlign="center"
-      anchorX="center"
-      anchorY="middle"
-      renderOrder={10}
-      depthTest={false}
-      depthWrite={false}
-    >
+    <Text ref={textRef} position={position} fontSize={0.116} maxWidth={0.7}
+      lineHeight={1.44} textAlign="center" anchorX="center" anchorY="middle"
+      renderOrder={10} depthTest={false} depthWrite={false}>
       {text}
     </Text>
   );
 }
 
-// ─── Interactive Door ────────────────────────────────────────────────────────
-function Door({ index, position, choice, onClick, isClicked, isHovered, setHovered, doorRef, totalChoices }) {
+// ─── Interactive door ─────────────────────────────────────────────────────────
+function Door({ index, position, choice, onClick, isClicked, isHovered,
+  setHovered, doorRef, totalChoices, flyOff }) {
   const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
   const groupRef = useRef();
   const isRightmost = totalChoices != null && index === totalChoices - 1;
   const textX = isRightmost ? 0.88 : 0.72;
 
+  // When flying off: shoot to the left; when clicked: move to position; else idle offset
+  const targetPos = flyOff
+    ? [position[0] - 22, position[1], position[2]]
+    : isClicked
+      ? position
+      : [position[0] * 0.8, position[1], position[2] * 0.8];
+
   const { pos, rot } = useSpring({
-    pos: isClicked ? position : [position[0] * 0.8, position[1], position[2] * 0.8],
+    pos: targetPos,
     rot: isClicked ? [0, -3.1, 0] : isHovered ? [0, -2.88, 0] : [0, 0, 0],
-    config: { mass: 1, tension: 180, friction: 20 },
+    config: flyOff
+      ? { tension: 220, friction: 24 }      // fast snap off
+      : { mass: 1, tension: 180, friction: 20 },
   });
 
   return (
@@ -76,12 +74,10 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
       if (doorRef) doorRef(node);
     }} position={pos}>
       <ShaderTextPlane text={choice.text} position={[textX, 0, -0.3]} />
-      <mesh
-        position={[0.48, 0, 0.05]}
+      <mesh position={[0.48, 0, 0.05]}
         onClick={() => onClick(index)}
         onPointerOver={() => setHovered(index)}
-        onPointerOut={() => setHovered(null)}
-      >
+        onPointerOut={() => setHovered(null)}>
         <boxGeometry args={[1.3, 2.6, 0.2]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
@@ -95,11 +91,12 @@ function Door({ index, position, choice, onClick, isClicked, isHovered, setHover
   );
 }
 
-// ─── Placeholder (next scene preview inside zoom) ───────────────────────────
+// ─── Placeholder door (non-interactive, for next-scenario preview) ────────────
 function PlaceholderDoor({ position, choice, totalChoices, index }) {
   const texture = useLoader(TextureLoader, `${process.env.PUBLIC_URL}/textures/bluewood.jpg`);
   const isRightmost = totalChoices != null && index === totalChoices - 1;
   const textX = isRightmost ? 0.88 : 0.72;
+  // Match the idle visual offset of interactive doors
   const pos = [position[0] * 0.8, position[1], position[2] * 0.8];
   return (
     <group position={pos}>
@@ -112,204 +109,199 @@ function PlaceholderDoor({ position, choice, totalChoices, index }) {
   );
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const PLACEHOLDER_Z = -500;
-const TARGET_X = 20;
-const TARGET_Y = -35;
-const ZOOM_DURATION = 3500;
-const HANDOFF_PROGRESS = 0.999;
+// ─── Animation durations ──────────────────────────────────────────────────────
+const ZOOM_DURATION = 2200; // ms — how long the full zoom+approach takes
 
-// ─── Scene (3D content for one scenario) ────────────────────────────────────
-function Scene({ scenario, nextScenario, onFinish, doorRefs, onZoomStart }) {
+// ─── 3-D Scene for one scenario ───────────────────────────────────────────────
+function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
   const { camera } = useThree();
   const initialQuat = useRef();
 
-  const zoomTargetPosition = useMemo(() => new Vector3(TARGET_X, TARGET_Y, PLACEHOLDER_Z + 6), []);
-  const placeholderPosition = useMemo(() => new Vector3(TARGET_X, TARGET_Y - (-2.2), PLACEHOLDER_Z), []);
+  // Saved starting camera to lerp from
+  const camStartPos = useRef({ x: 0, y: -2.2, z: 6 });
+  const camStartFov = useRef(52);
 
+  // After scene change, prevent clicks for a moment
   const interactionReadyRef = useRef(false);
+  useEffect(() => {
+    interactionReadyRef.current = false;
+    const t = setTimeout(() => { interactionReadyRef.current = true; }, 350);
+    return () => clearTimeout(t);
+  }, [scenario]);
 
   useEffect(() => {
     camera.lookAt(0, -2.2, 0);
     initialQuat.current = camera.quaternion.clone();
   }, [camera]);
 
-  useEffect(() => {
-    setHovered(null);
-    interactionReadyRef.current = false;
-    const t = setTimeout(() => { interactionReadyRef.current = true; }, 300);
-    return () => clearTimeout(t);
-  }, [scenario]);
-
-  const [clicked, setClicked] = useState(null);
+  // Door state
+  const [clickedDoor, setClickedDoor] = useState(null);   // opens (swings)
+  const [flyingOff, setFlyingOff] = useState(false);      // non-clicked doors shoot left
   const [hovered, setHovered] = useState(null);
-  const [doorOverrides, setDoorOverrides] = useState(null);
-  const [movingDoorIndex, setMovingDoorIndex] = useState(null);
 
-
-  const activeClickedRef = useRef(null);
-  const zoomStartRef = useRef(null);
-  const zoomStartPositionRef = useRef(null);
+  // Animation state (all in refs for useFrame)
+  const animPhaseRef = useRef('idle');   // 'idle' | 'animating' | 'done'
+  const animStartRef = useRef(null);
   const handoffDoneRef = useRef(false);
-  const hasResetDoorsRef = useRef(false);
-  const directionRef = useRef(null);
+  const selectedRef = useRef(null);
+
+  // Ref to the "next scenario" group so we can imperatively move it
+  const nextGroupRef = useRef();
 
   const spacing = 3.6;
   const y = -2.8;
-  const defaultPos = new Vector3(0, -2.2, 6);
+  const defaultCamZ = 6;
+  const targetCamZ = 2.5;   // zoom-in camera Z
+  const targetFov = 42;
+  const nextStartZ = -45;   // where next-scenario group begins (far behind)
+  const nextEndZ = 0;       // where it ends up (exactly where current scene lives)
 
-  const originalDoorPositions = scenario.choices.map((_, i) => {
+  const doorPositions = useMemo(() => scenario.choices.map((_, i) => {
     const total = scenario.choices.length;
     const x = i * spacing - ((total - 1) * spacing) / 2 - 0.48;
     return [x, y, 0];
-  });
+  }), [scenario]);
 
-  const placeholderDoorPositions = nextScenario
+  const nextDoorPositions = useMemo(() => nextScenario
     ? nextScenario.choices.map((_, i) => {
       const total = nextScenario.choices.length;
       const x = i * spacing - ((total - 1) * spacing) / 2 - 0.48;
       return [x, y, 0];
     })
-    : [];
+    : [], [nextScenario]);
 
-  const doorPositions = doorOverrides ? doorOverrides : originalDoorPositions;
-  const CENTER_POSITION = [-0.48, y, 0];
-
+  // ── per-frame animation ────────────────────────────────────────────────────
   useFrame(() => {
+    // Always lock look direction
     if (initialQuat.current) {
       camera.quaternion.copy(initialQuat.current);
       camera.rotation.setFromQuaternion(initialQuat.current);
     }
 
-    // Idle: gently return to default
-    if (activeClickedRef.current === null) {
-      const lerpAlpha = 0.05;
-      camera.position.x += (defaultPos.x - camera.position.x) * lerpAlpha;
-      camera.position.y += (defaultPos.y - camera.position.y) * lerpAlpha;
-      camera.position.z += (defaultPos.z - camera.position.z) * lerpAlpha;
+    if (animPhaseRef.current === 'idle') {
+      // Gently float back to default if not animating
+      camera.position.x += (0 - camera.position.x) * 0.05;
+      camera.position.y += (-2.2 - camera.position.y) * 0.05;
+      camera.position.z += (defaultCamZ - camera.position.z) * 0.05;
       camera.fov += (52 - camera.fov) * 0.05;
       camera.updateProjectionMatrix();
+      return;
     }
 
-    // Zooming in
-    if (activeClickedRef.current !== null) {
-      const now = Date.now();
-      if (!zoomStartRef.current) zoomStartRef.current = now;
-      const elapsed = now - zoomStartRef.current;
-      const rawProgress = Math.min(elapsed / ZOOM_DURATION, 1);
-      const progress = easeInOutQuint(rawProgress);
+    if (animPhaseRef.current === 'animating') {
+      if (!animStartRef.current) {
+        animStartRef.current = Date.now();
+        // Snapshot camera starting position for smooth lerp
+        camStartPos.current = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+        camStartFov.current = camera.fov;
+      }
 
-      if (progress < HANDOFF_PROGRESS) {
-        const startPos = zoomStartPositionRef.current || defaultPos.clone();
-        const t = progress / HANDOFF_PROGRESS;
-        camera.position.lerpVectors(startPos, zoomTargetPosition, t);
+      const elapsed = Date.now() - animStartRef.current;
+      const raw = Math.min(elapsed / ZOOM_DURATION, 1);
+      const t = easeInOutCubic(raw);
+
+      // Camera zooms in
+      camera.position.x = camStartPos.current.x + (0 - camStartPos.current.x) * t;
+      camera.position.y = camStartPos.current.y + (-2.2 - camStartPos.current.y) * t;
+      camera.position.z = camStartPos.current.z + (targetCamZ - camStartPos.current.z) * t;
+      camera.fov = camStartFov.current + (targetFov - camStartFov.current) * t;
+      camera.updateProjectionMatrix();
+
+      // Next-scenario content rush forward from far behind
+      if (nextGroupRef.current) {
+        nextGroupRef.current.position.z = nextStartZ + (nextEndZ - nextStartZ) * t;
+      }
+
+      if (raw >= 1 && !handoffDoneRef.current) {
+        handoffDoneRef.current = true;
+
+        // Snap camera back to default (invisible because React will swap scene)
+        camera.position.set(0, -2.2, defaultCamZ);
+        camera.fov = 52;
         camera.updateProjectionMatrix();
-
-        // Once past the original doors, hide them
-        if (camera.position.z < -2 && !hasResetDoorsRef.current) {
-          hasResetDoorsRef.current = true;
-          setClicked(null);
-          setDoorOverrides(null);
-          setMovingDoorIndex(null);
+        if (initialQuat.current) {
+          camera.quaternion.copy(initialQuat.current);
+          camera.rotation.setFromQuaternion(initialQuat.current);
         }
-      } else {
-        // Handoff: snap camera back silently, trigger transition
-        if (!handoffDoneRef.current) {
-          handoffDoneRef.current = true;
 
-          camera.position.copy(defaultPos);
-          camera.fov = 52;
-          camera.updateProjectionMatrix();
-          if (initialQuat.current) {
-            camera.quaternion.copy(initialQuat.current);
-            camera.rotation.setFromQuaternion(initialQuat.current);
-          }
+        if (nextGroupRef.current) nextGroupRef.current.position.z = 0;
 
-          const finishedIndex = activeClickedRef.current;
-          activeClickedRef.current = null;
-          setClicked(null);
-          setDoorOverrides(null);
-          setMovingDoorIndex(null);
-          directionRef.current = null;
+        const chosen = selectedRef.current;
 
-          // Reset all refs for next use
-          handoffDoneRef.current = false;
-          zoomStartRef.current = null;
-          zoomStartPositionRef.current = null;
-          hasResetDoorsRef.current = false;
+        // Reset all state refs for reuse
+        animPhaseRef.current = 'idle';
+        animStartRef.current = null;
+        handoffDoneRef.current = false;
+        selectedRef.current = null;
 
-          if (typeof onFinish === "function") onFinish(finishedIndex);
-        }
+        if (typeof onFinish === 'function') onFinish(chosen);
       }
     }
   });
 
+  // ── door click handler ─────────────────────────────────────────────────────
   function handleDoorClick(i) {
     if (!interactionReadyRef.current) return;
-    if (activeClickedRef.current !== null) return;
+    if (animPhaseRef.current !== 'idle') return;
 
-    const doZoom = () => {
-      activeClickedRef.current = i;
-      handoffDoneRef.current = false;
-      setClicked(i);
-      zoomStartRef.current = null;
-      zoomStartPositionRef.current = camera.position.clone();
-      hasResetDoorsRef.current = false;
-      onZoomStart && onZoomStart();
-    };
+    selectedRef.current = i;
+    setClickedDoor(i);       // opens this door (spring rotation)
+    setFlyingOff(true);      // other doors fly left
+    setHovered(null);
+    onAnimStart && onAnimStart();
 
-    if (i === 1) {
-      doZoom();
-    } else {
-      setMovingDoorIndex(i);
-      setDoorOverrides(scenario.choices.map((_, j) => (j === i ? CENTER_POSITION : null)));
-      setTimeout(doZoom, 600);
-    }
+    // Short pause so the door begins opening before camera moves
+    setTimeout(() => {
+      animPhaseRef.current = 'animating';
+      animStartRef.current = null;
+    }, 280);
   }
 
   return (
     <>
-      <group renderOrder={5}>
-        <Text position={[0, 0.72, -2]} fontSize={0.28} color="white" anchorX="center" anchorY="middle" renderOrder={5} depthTest={false} depthWrite={false}>
-          {scenario.title}
-        </Text>
-        <Text position={[0, 0.12, -2]} fontSize={0.16} maxWidth={6} color="white" anchorX="center" anchorY="middle" textAlign="center" renderOrder={5} depthTest={false} depthWrite={false}>
-          {scenario.description}
-        </Text>
+      {/* Current scenario text */}
+      <Text position={[0, 0.72, -2]} fontSize={0.28} color="white"
+        anchorX="center" anchorY="middle" renderOrder={5} depthTest={false} depthWrite={false}>
+        {scenario.title}
+      </Text>
+      <Text position={[0, 0.12, -2]} fontSize={0.16} maxWidth={6} color="white"
+        anchorX="center" anchorY="middle" textAlign="center" renderOrder={5} depthTest={false} depthWrite={false}>
+        {scenario.description}
+      </Text>
 
-        {scenario.choices.map((choice, i) => {
-          if (movingDoorIndex !== null && i !== movingDoorIndex) return null;
-          return (
-            <Door
-              key={i}
-              index={i}
-              position={doorOverrides && doorOverrides[i] ? doorOverrides[i] : doorPositions[i]}
-              choice={choice}
-              onClick={handleDoorClick}
-              isClicked={clicked === i}
-              isHovered={hovered === i && clicked === null}
-              setHovered={(val) => { if (interactionReadyRef.current) setHovered(val); }}
-              doorRef={(el) => (doorRefs.current[i] = el)}
-              totalChoices={scenario.choices.length}
-            />
-          );
-        })}
-      </group>
+      {/* Current scenario doors */}
+      {scenario.choices.map((choice, i) => (
+        <Door
+          key={i}
+          index={i}
+          position={doorPositions[i]}
+          choice={choice}
+          onClick={handleDoorClick}
+          isClicked={clickedDoor === i}
+          isHovered={hovered === i && clickedDoor === null}
+          flyOff={flyingOff && clickedDoor !== i}    // non-selected fly left
+          setHovered={(val) => { if (interactionReadyRef.current && animPhaseRef.current === 'idle') setHovered(val); }}
+          doorRef={(el) => (doorRefs.current[i] = el)}
+          totalChoices={scenario.choices.length}
+        />
+      ))}
 
-      {/* Placeholder next scene, placed far ahead for zoom target */}
+      {/* Next scenario content — starts far behind doors, rushes forward on click */}
       {nextScenario && (
-        <group position={placeholderPosition.toArray()} renderOrder={4}>
-          <Text position={[0, 0.72, -2]} fontSize={0.28} color="white" anchorX="center" anchorY="middle" renderOrder={4} depthTest={true} depthWrite={false}>
+        <group ref={nextGroupRef} position={[0, 0, nextStartZ]} renderOrder={4}>
+          <Text position={[0, 0.72, -2]} fontSize={0.28} color="white"
+            anchorX="center" anchorY="middle" renderOrder={4} depthTest={false} depthWrite={false}>
             {nextScenario.title}
           </Text>
-          <Text position={[0, 0.12, -2]} fontSize={0.16} maxWidth={6} color="white" anchorX="center" anchorY="middle" textAlign="center" renderOrder={4} depthTest={true} depthWrite={false}>
+          <Text position={[0, 0.12, -2]} fontSize={0.16} maxWidth={6} color="white"
+            anchorX="center" anchorY="middle" textAlign="center" renderOrder={4} depthTest={false} depthWrite={false}>
             {nextScenario.description}
           </Text>
           {nextScenario.choices.map((choice, i) => (
             <PlaceholderDoor
               key={i}
               index={i}
-              position={placeholderDoorPositions[i] || [0, 0, 0]}
+              position={nextDoorPositions[i] || [0, 0, 0]}
               choice={choice}
               totalChoices={nextScenario.choices.length}
             />
@@ -320,10 +312,13 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onZoomStart }) {
   );
 }
 
-// ─── Sliding transition wrapper ──────────────────────────────────────────────
-function TransitionManager({ scenario, nextScenario, onFinish, doorRefs, direction, onZoomStart }) {
+// ─── Sliding transition wrapper (for timeline nav only) ───────────────────────
+function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
+  direction, skipSlide, onAnimStart }) {
   const transitions = useTransition(scenario, {
     keys: s => s.title,
+    // When triggered by a door-click (skipSlide), use immediate (no animation)
+    immediate: skipSlide,
     from: { position: [direction * 18, 0, 0] },
     enter: { position: [0, 0, 0] },
     leave: { position: [-direction * 18, 0, 0] },
@@ -337,30 +332,30 @@ function TransitionManager({ scenario, nextScenario, onFinish, doorRefs, directi
         nextScenario={nextScenario}
         onFinish={onFinish}
         doorRefs={doorRefs}
-        onZoomStart={onZoomStart}
+        onAnimStart={onAnimStart}
       />
     </animated.group>
   ));
 }
 
-// ─── Camera setup ────────────────────────────────────────────────────────────
+// ─── Camera initializer ───────────────────────────────────────────────────────
 function CameraController() {
   const { camera } = useThree();
-  useEffect(() => {
-    camera.lookAt(0, -2.2, 0);
-  }, [camera]);
+  useEffect(() => { camera.lookAt(0, -2.2, 0); }, [camera]);
   return null;
 }
 
-// ─── Main export ─────────────────────────────────────────────────────────────
-export default function ScenarioScene({ scenario, nextScenario, choices, onChoice, direction, onNavigate }) {
+// ─── Main export ──────────────────────────────────────────────────────────────
+export default function ScenarioScene({
+  scenario, nextScenario, choices, onChoice, direction, onNavigate, skipSlide
+}) {
   const doorRefs = useRef([]);
   const cooldownRef = useRef(false);
   const touchStartXRef = useRef(null);
-  const [isZooming, setIsZooming] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   function fireNavigate(dir) {
-    if (cooldownRef.current || isZooming) return;
+    if (cooldownRef.current || isAnimating) return;
     cooldownRef.current = true;
     onNavigate && onNavigate(dir);
     setTimeout(() => { cooldownRef.current = false; }, 700);
@@ -410,7 +405,8 @@ export default function ScenarioScene({ scenario, nextScenario, choices, onChoic
             onFinish={onChoice}
             doorRefs={doorRefs}
             direction={direction || 1}
-            onZoomStart={() => setIsZooming(true)}
+            skipSlide={skipSlide}
+            onAnimStart={() => setIsAnimating(true)}
           />
         </Suspense>
       </Canvas>

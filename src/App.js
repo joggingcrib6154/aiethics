@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import scenarioData from './data/scenarios.json';
 import ScenarioScene from './components/ScenarioScene';
 import IntroductionScreen from './components/IntroductionScreen';
@@ -44,6 +44,13 @@ function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  // skipSlide=true suppresses the TransitionManager spring when advancing via door click
+  const [skipSlide, setSkipSlide] = useState(false);
+
+  // Auto-clear skipSlide after one render so it doesn't affect subsequent nav
+  useEffect(() => {
+    if (skipSlide) setSkipSlide(false);
+  }, [skipSlide]);
 
   const gameOver = currentIndex >= scenarioData.length && choices.length >= scenarioData.length;
   const finalBadge = gameOver ? assignBadge(choices) : null;
@@ -62,6 +69,8 @@ function App() {
       newChoices[currentIndex] = choiceObj;
       const truncated = newChoices.slice(0, currentIndex + 1);
 
+      // Door-click advance: suppress the slide — the 3D animation is the transition
+      setSkipSlide(true);
       setChoices(truncated);
       setDirection(1);
       setCurrentIndex(currentIndex + 1);
@@ -110,6 +119,7 @@ function App() {
                 choices={choices}
                 direction={direction}
                 onNavigate={handleNavigate}
+                skipSlide={skipSlide}
               />
               <TimelineControls
                 total={scenarioData.length}
