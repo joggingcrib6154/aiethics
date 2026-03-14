@@ -119,9 +119,9 @@ const FOV_DEFAULT = 52;
 const FOV_PEAK = 44;
 const NEXT_START_Z = -400;     // close enough to actually be seen approaching from the distance
 const NEXT_PEAK_Z = CAM_PEAK_Z - 6; // next scenario stops perfectly 6 units in front of the camera
-// Phase durations (ms)
-const PHASE1_DUR = 4000;       // much longer, majestic zoom-in
-const PHASE2_DUR = 3500;       // synchronized zoom-out over 3.5s
+// Phase durations (ms) — sped up by 2.2x
+const PHASE1_DUR = 1818;       // originally 4000
+const PHASE2_DUR = 1591;       // originally 3500
 
 // ─── 3-D Scene ────────────────────────────────────────────────────────────────
 function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
@@ -393,6 +393,11 @@ export default function ScenarioScene({
   const cooldownRef = useRef(false);
   const touchStartXRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // Unblock navigation once the new scenario has mounted
+  useEffect(() => {
+    setIsAnimating(false);
+  }, [scenario]);
 
   function fireNavigate(dir) {
     if (cooldownRef.current || isAnimating) return;

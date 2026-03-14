@@ -47,11 +47,6 @@ function App() {
   // skipSlide=true suppresses the TransitionManager spring when advancing via door click
   const [skipSlide, setSkipSlide] = useState(false);
 
-  // Auto-clear skipSlide after one render so it doesn't affect subsequent nav
-  useEffect(() => {
-    if (skipSlide) setSkipSlide(false);
-  }, [skipSlide]);
-
   const gameOver = currentIndex >= scenarioData.length && choices.length >= scenarioData.length;
   const finalBadge = gameOver ? assignBadge(choices) : null;
 
@@ -78,6 +73,7 @@ function App() {
   };
 
   const handleTimelineSelect = (index) => {
+    setSkipSlide(false);
     if (index < currentIndex) {
       setDirection(-1);
     } else {
@@ -90,10 +86,12 @@ function App() {
     const newIndex = currentIndex + dir;
     // Only go back if there's a previous scenario, or forward if the next one was already answered
     if (dir === -1 && newIndex >= 0) {
+      setSkipSlide(false);
       setDirection(-1);
       setCurrentIndex(newIndex);
     } else if (dir === 1 && newIndex < choices.length) {
       // Allow jumping forward only into already-answered scenes
+      setSkipSlide(false);
       setDirection(1);
       setCurrentIndex(newIndex);
     }
