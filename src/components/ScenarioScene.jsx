@@ -114,6 +114,8 @@ const SPACING = 3.6;
 const DOOR_Y = -2.8;
 const CENTER_X = -0.48;
 const CAM_DEFAULT = { x: 0, y: -2.2, z: 6 };
+const CAM_PEAK_X = 0.8;        // shifts the zoom target to the right
+const CAM_PEAK_Y = -3.0;       // shifts the zoom target down
 const CAM_PEAK_Z = -50;        // goes significantly deeper into the void
 const FOV_DEFAULT = 52;
 const FOV_PEAK = 44;
@@ -127,13 +129,6 @@ const PHASE2_DUR = 1591;       // originally 3500
 function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
   const { camera } = useThree();
   const initialQuat = useRef();
-
-  const interactionReadyRef = useRef(false);
-  useEffect(() => {
-    interactionReadyRef.current = false;
-    const t = setTimeout(() => { interactionReadyRef.current = true; }, 350);
-    return () => clearTimeout(t);
-  }, [scenario]);
 
   useEffect(() => {
     camera.lookAt(0, CAM_DEFAULT.y, 0);
@@ -201,6 +196,8 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       const t1 = Math.min(elapsed / PHASE1_DUR, 1);
       const e1 = easeInOutCubic(t1);
 
+      camera.position.x = THREE.MathUtils.lerp(CAM_DEFAULT.x, CAM_PEAK_X, e1);
+      camera.position.y = THREE.MathUtils.lerp(CAM_DEFAULT.y, CAM_PEAK_Y, e1);
       camera.position.z = THREE.MathUtils.lerp(CAM_DEFAULT.z, CAM_PEAK_Z, e1);
       camera.fov = THREE.MathUtils.lerp(FOV_DEFAULT, FOV_PEAK, e1);
       camera.updateProjectionMatrix();
@@ -232,6 +229,8 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       const t2 = Math.min(elapsed / PHASE2_DUR, 1);
       const e2 = easeInOutCubic(t2);
 
+      camera.position.x = THREE.MathUtils.lerp(CAM_PEAK_X, CAM_DEFAULT.x, e2);
+      camera.position.y = THREE.MathUtils.lerp(CAM_PEAK_Y, CAM_DEFAULT.y, e2);
       camera.position.z = THREE.MathUtils.lerp(CAM_PEAK_Z, CAM_DEFAULT.z, e2);
       camera.fov = THREE.MathUtils.lerp(FOV_PEAK, FOV_DEFAULT, e2);
       camera.updateProjectionMatrix();
@@ -284,7 +283,6 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
 
   // ── door click handler ──────────────────────────────────────────────────────
   function handleDoorClick(i) {
-    if (!interactionReadyRef.current) return;
     if (phaseRef.current !== 'idle') return;
 
     selectedRef.current = i;
@@ -328,7 +326,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
           holdAtCenter={holdAtCenter && i === clickedDoor}
           flyOffSelf={flyOffSelected && i === clickedDoor}
           setHovered={(val) => {
-            if (interactionReadyRef.current && phaseRef.current === 'idle') setHovered(val);
+            if (phaseRef.current === 'idle') setHovered(val);
           }}
           doorRef={(el) => (doorRefs.current[i] = el)}
           totalChoices={scenario.choices.length}
