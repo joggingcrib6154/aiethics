@@ -3,6 +3,7 @@ import scenarioData from './data/scenarios.json';
 import ScenarioScene from './components/ScenarioScene';
 import IntroductionScreen from './components/IntroductionScreen';
 import TimelineControls from './components/TimelineControls';
+import { useTransition, animated } from '@react-spring/web';
 
 import { getMaskFragments } from './logic/getMaskFragments';
 import MaskGrid from './components/MaskGrid';
@@ -97,6 +98,13 @@ function App() {
     }
   };
 
+  const transitions = useTransition(gameOver, {
+    from: { transform: 'translate3d(0, -100%, 0)' },
+    enter: { transform: 'translate3d(0, 0%, 0)' },
+    leave: { transform: 'translate3d(0, 100%, 0)' },
+    config: { tension: 120, friction: 30 }
+  });
+
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, color: 'white', overflow: 'hidden', backgroundColor: 'rgb(128, 102, 179)' }}>
 
@@ -108,27 +116,31 @@ function App() {
             <MaskGrid choices={choices} />
           </div>
 
-          {!gameOver ? (
-            <>
-              <ScenarioScene
-                scenario={scenarioData[currentIndex]}
-                nextScenario={scenarioData[currentIndex + 1]}
-                onChoice={handleChoice}
-                choices={choices}
-                direction={direction}
-                onNavigate={handleNavigate}
-                skipSlide={skipSlide}
-              />
-              <TimelineControls
-                total={scenarioData.length}
-                current={currentIndex}
-                maxReached={choices.length}
-                onSelect={handleTimelineSelect}
-              />
-            </>
-          ) : (
-            <EndScreen choices={choices} archetype={finalBadge} />
-          )}
+          {transitions((style, isGameOver) => (
+            <animated.div style={{ ...style, position: 'absolute', width: '100%', height: '100%' }}>
+              {!isGameOver ? (
+                <>
+                  <ScenarioScene
+                    scenario={scenarioData[currentIndex]}
+                    nextScenario={scenarioData[currentIndex + 1]}
+                    onChoice={handleChoice}
+                    choices={choices}
+                    direction={direction}
+                    onNavigate={handleNavigate}
+                    skipSlide={skipSlide}
+                  />
+                  <TimelineControls
+                    total={scenarioData.length}
+                    current={currentIndex}
+                    maxReached={choices.length}
+                    onSelect={handleTimelineSelect}
+                  />
+                </>
+              ) : (
+                <EndScreen choices={choices} archetype={finalBadge} />
+              )}
+            </animated.div>
+          ))}
         </>
       )}
     </div>

@@ -114,8 +114,8 @@ const SPACING = 3.6;
 const DOOR_Y = -2.8;
 const CENTER_X = -0.48;
 const CAM_DEFAULT = { x: 0, y: -2.2, z: 6 };
-const CAM_PEAK_X = 0.8;        // shifts the zoom target to the right
-const CAM_PEAK_Y = -3.0;       // shifts the zoom target down
+const CAM_PEAK_X = 2.0;        // shifts the zoom target to the right
+const CAM_PEAK_Y = -7.0;       // shifts the zoom target down
 const CAM_PEAK_Z = -50;        // goes significantly deeper into the void
 const FOV_DEFAULT = 52;
 const FOV_PEAK = 44;
@@ -204,7 +204,9 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
 
       // Next content rushes from extremely far toward the target peak (e1 for smooth arrival)
       if (nextGroupRef.current) {
-        nextGroupRef.current.position.z = THREE.MathUtils.lerp(NEXT_START_Z, NEXT_PEAK_Z, easeInOutCubic(t1));
+        nextGroupRef.current.position.x = THREE.MathUtils.lerp(0, CAM_PEAK_X - CAM_DEFAULT.x, e1);
+        nextGroupRef.current.position.y = THREE.MathUtils.lerp(0, CAM_PEAK_Y - CAM_DEFAULT.y, e1);
+        nextGroupRef.current.position.z = THREE.MathUtils.lerp(NEXT_START_Z, NEXT_PEAK_Z, e1);
       }
 
       // Hide text and let door fly left only when camera has zoomed far enough
@@ -237,6 +239,8 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
 
       // Next content closes identical easing: from NEXT_PEAK_Z to 0 (same physical speed as camera)
       if (nextGroupRef.current) {
+        nextGroupRef.current.position.x = THREE.MathUtils.lerp(CAM_PEAK_X - CAM_DEFAULT.x, 0, e2);
+        nextGroupRef.current.position.y = THREE.MathUtils.lerp(CAM_PEAK_Y - CAM_DEFAULT.y, 0, e2);
         nextGroupRef.current.position.z = THREE.MathUtils.lerp(NEXT_PEAK_Z, 0, e2);
       }
 
@@ -251,6 +255,8 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
           camera.rotation.setFromQuaternion(initialQuat.current);
         }
         if (nextGroupRef.current) {
+          nextGroupRef.current.position.x = 0;
+          nextGroupRef.current.position.y = 0;
           nextGroupRef.current.position.z = 0;
         }
 
@@ -292,6 +298,15 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
     setShowText(true);        // make sure text is showing (reset)
     setHovered(null);
     clearFiredRef.current = false;
+
+    // Swipe down to end screen logic instead of zoom animation for final sequence
+    if (!nextScenario) {
+      setTimeout(() => {
+        if (typeof onFinish === 'function') onFinish(i);
+      }, 700); // Wait long enough for doors to gracefully fly/open before App.js swipes down
+      return;
+    }
+
     phaseRef.current = 'phase1';
     phase1StartRef.current = null;
     onAnimStart && onAnimStart();
