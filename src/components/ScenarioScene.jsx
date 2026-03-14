@@ -114,14 +114,14 @@ const SPACING = 3.6;
 const DOOR_Y = -2.8;
 const CENTER_X = -0.48;
 const CAM_DEFAULT = { x: 0, y: -2.2, z: 6 };
-const CAM_PEAK_Z = -20;        // camera zooms deeply past the doors
+const CAM_PEAK_Z = -50;        // goes significantly deeper into the void
 const FOV_DEFAULT = 52;
 const FOV_PEAK = 44;
-const NEXT_START_Z = -125000;  // very far back, but approaching smoothly
-const NEXT_PEAK_Z = CAM_PEAK_Z - 6; // next scenario stops exactly 6 units in front of the camera peak
+const NEXT_START_Z = -400;     // close enough to actually be seen approaching from the distance
+const NEXT_PEAK_Z = CAM_PEAK_Z - 6; // next scenario stops perfectly 6 units in front of the camera
 // Phase durations (ms)
-const PHASE1_DUR = 3000;       // much longer zoom-in
-const PHASE2_DUR = 2500;       // longer synchronized zoom-out
+const PHASE1_DUR = 4000;       // much longer, majestic zoom-in
+const PHASE2_DUR = 3500;       // synchronized zoom-out over 3.5s
 
 // ─── 3-D Scene ────────────────────────────────────────────────────────────────
 function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
@@ -210,9 +210,9 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
         nextGroupRef.current.position.z = THREE.MathUtils.lerp(NEXT_START_Z, NEXT_PEAK_Z, easeInOutCubic(t1));
       }
 
-      // Hide text and let door fly left only when camera has actually gone past it (z < -0.5)
-      // so it's guaranteed to be out of view before it gets moved.
-      if (!clearFiredRef.current && camera.position.z < -0.5) {
+      // Hide text and let door fly left only when camera has zoomed far enough
+      // safely past the door so it is entirely out of view.
+      if (!clearFiredRef.current && camera.position.z < -3.0) {
         clearFiredRef.current = true;
         setShowText(false);
         setHoldAtCenter(false);
