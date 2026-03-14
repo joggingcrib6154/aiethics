@@ -225,7 +225,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       }
     }
 
-    // ── Phase 2: camera zooms OUT — next content stays at NEXT_START_Z until snap ──
+    // ── Phase 2: camera zooms OUT and next scenario moves toward z=0 ──
     if (phaseRef.current === 'phase2') {
       if (!phase2StartRef.current) phase2StartRef.current = Date.now();
       const elapsed = Date.now() - phase2StartRef.current;
@@ -241,10 +241,9 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
         nextGroupRef.current.position.z = THREE.MathUtils.lerp(NEXT_PEAK_Z, 0, e2);
       }
 
-      // Handoff
-      if (t2 >= 1 && !handoffDoneRef.current) {
-        handoffDoneRef.current = true;
-
+      // Transition to hold phase
+      if (t2 >= 1) {
+        // Guarantee absolute precision at the exact final position before hold
         camera.position.set(CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z);
         camera.fov = FOV_DEFAULT;
         camera.updateProjectionMatrix();
@@ -252,6 +251,21 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
           camera.quaternion.copy(initialQuat.current);
           camera.rotation.setFromQuaternion(initialQuat.current);
         }
+        if (nextGroupRef.current) {
+          nextGroupRef.current.position.z = 0;
+        }
+
+        phaseRef.current = 'hold';
+        phase2StartRef.current = Date.now(); // reuse for hold timer
+      }
+    }
+
+    // ── Phase 3: Hold briefly at final position before swap ──
+    if (phaseRef.current === 'hold') {
+      const elapsed = Date.now() - phase2StartRef.current;
+
+      if (elapsed > 100 && !handoffDoneRef.current) {
+        handoffDoneRef.current = true;
 
         const chosen = selectedRef.current;
 
@@ -351,9 +365,9 @@ function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
   const transitions = useTransition(scenario, {
     keys: s => s.title,
     immediate: skipSlide,
-    from: { position: [direction * 18, 0, 0] },
+    from: { position: skipSlide ? [0, 0, 0] : [direction * 18, 0, 0] },
     enter: { position: [0, 0, 0] },
-    leave: { position: [-direction * 18, 0, 0] },
+    leave: { position: skipSlide ? [0, 0, 0] : [-direction * 18, 0, 0] },
     config: { tension: 110, friction: 22 },
   });
   return transitions((style, item) => (
