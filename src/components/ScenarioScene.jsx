@@ -113,12 +113,13 @@ function PlaceholderDoor({ position, choice, totalChoices, index }) {
 const SPACING = 3.6;
 const DOOR_Y = -2.8;
 const CENTER_X = -0.48;
-const CAM_DEFAULT = { x: 0, y: -2.2, z: 6 };
+const getIsMobile = () => window.innerWidth < 768 || (window.innerWidth / window.innerHeight) < 1.0;
+const CAM_DEFAULT = { x: 0, y: -2.2, get z() { return getIsMobile() ? 11 : 6; } };
 const CAM_PEAK_X = 2.0;        // shifts the zoom target to the right
 const CAM_PEAK_Y = -7.0;       // shifts the zoom target down
 const CAM_PEAK_Z = -50;        // goes significantly deeper into the void
-const FOV_DEFAULT = 52;
-const FOV_PEAK = 44;
+const getFovDefault = () => getIsMobile() ? 65 : 52;
+const getFovPeak = () => getIsMobile() ? 55 : 44;
 const NEXT_START_Z = -400;     // close enough to actually be seen approaching from the distance
 const NEXT_PEAK_Z = CAM_PEAK_Z - 6; // next scenario stops perfectly 6 units in front of the camera
 // Phase durations (ms) — sped up by 2.2x
@@ -126,7 +127,7 @@ const PHASE1_DUR = 1818;       // originally 4000
 const PHASE2_DUR = 1591;       // originally 3500
 
 // ─── 3-D Scene ────────────────────────────────────────────────────────────────
-function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
+function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart, onFinalDoorClick }) {
   const { camera } = useThree();
   const initialQuat = useRef();
 
@@ -184,7 +185,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       camera.position.x += (CAM_DEFAULT.x - camera.position.x) * 0.05;
       camera.position.y += (CAM_DEFAULT.y - camera.position.y) * 0.05;
       camera.position.z += (CAM_DEFAULT.z - camera.position.z) * 0.05;
-      camera.fov += (FOV_DEFAULT - camera.fov) * 0.05;
+      camera.fov += (getFovDefault() - camera.fov) * 0.05;
       camera.updateProjectionMatrix();
       return;
     }
@@ -199,7 +200,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       camera.position.x = THREE.MathUtils.lerp(CAM_DEFAULT.x, CAM_PEAK_X, e1);
       camera.position.y = THREE.MathUtils.lerp(CAM_DEFAULT.y, CAM_PEAK_Y, e1);
       camera.position.z = THREE.MathUtils.lerp(CAM_DEFAULT.z, CAM_PEAK_Z, e1);
-      camera.fov = THREE.MathUtils.lerp(FOV_DEFAULT, FOV_PEAK, e1);
+      camera.fov = THREE.MathUtils.lerp(getFovDefault(), getFovPeak(), e1);
       camera.updateProjectionMatrix();
 
       // Next content rushes from extremely far toward the target peak (e1 for smooth arrival)
@@ -234,7 +235,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       camera.position.x = THREE.MathUtils.lerp(CAM_PEAK_X, CAM_DEFAULT.x, e2);
       camera.position.y = THREE.MathUtils.lerp(CAM_PEAK_Y, CAM_DEFAULT.y, e2);
       camera.position.z = THREE.MathUtils.lerp(CAM_PEAK_Z, CAM_DEFAULT.z, e2);
-      camera.fov = THREE.MathUtils.lerp(FOV_PEAK, FOV_DEFAULT, e2);
+      camera.fov = THREE.MathUtils.lerp(getFovPeak(), getFovDefault(), e2);
       camera.updateProjectionMatrix();
 
       // Next content closes identical easing: from NEXT_PEAK_Z to 0 (same physical speed as camera)
@@ -248,7 +249,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       if (t2 >= 1) {
         // Guarantee absolute precision at the exact final position before hold
         camera.position.set(CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z);
-        camera.fov = FOV_DEFAULT;
+        camera.fov = getFovDefault();
         camera.updateProjectionMatrix();
         if (initialQuat.current) {
           camera.quaternion.copy(initialQuat.current);
@@ -301,6 +302,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
 
     // Swipe down to end screen logic instead of zoom animation for final sequence
     if (!nextScenario) {
+      if (typeof onFinalDoorClick === 'function') onFinalDoorClick();
       setTimeout(() => {
         if (typeof onFinish === 'function') onFinish(i);
       }, 700); // Wait long enough for doors to gracefully fly/open before App.js swipes down
@@ -317,11 +319,11 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       {/* Current scenario text — hidden at CLEAR_DELAY */}
       {showText && (
         <>
-          <Text position={[0, 0.72, -2]} fontSize={0.28} color="white"
+          <Text position={[0, getIsMobile() ? 0.9 : 0.72, -2]} fontSize={getIsMobile() ? 0.38 : 0.28} color="white"
             anchorX="center" anchorY="middle" renderOrder={5} depthTest={false} depthWrite={false}>
             {scenario.title}
           </Text>
-          <Text position={[0, 0.12, -2]} fontSize={0.16} maxWidth={6} color="white"
+          <Text position={[0, getIsMobile() ? 0 : 0.12, -2]} fontSize={getIsMobile() ? 0.22 : 0.16} maxWidth={getIsMobile() ? 5 : 6} color="white"
             anchorX="center" anchorY="middle" textAlign="center" renderOrder={5} depthTest={false} depthWrite={false}>
             {scenario.description}
           </Text>
@@ -351,11 +353,11 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
       {/* Next scenario — stays at NEXT_START_Z until the very end of animation */}
       {nextScenario && (
         <group ref={nextGroupRef} position={[0, 0, NEXT_START_Z]}>
-          <Text position={[0, 0.72, -2]} fontSize={0.28} color="white"
+          <Text position={[0, getIsMobile() ? 0.9 : 0.72, -2]} fontSize={getIsMobile() ? 0.38 : 0.28} color="white"
             anchorX="center" anchorY="middle" renderOrder={4} depthTest={false} depthWrite={false}>
             {nextScenario.title}
           </Text>
-          <Text position={[0, 0.12, -2]} fontSize={0.16} maxWidth={6} color="white"
+          <Text position={[0, getIsMobile() ? 0 : 0.12, -2]} fontSize={getIsMobile() ? 0.22 : 0.16} maxWidth={getIsMobile() ? 5 : 6} color="white"
             anchorX="center" anchorY="middle" textAlign="center" renderOrder={4} depthTest={false} depthWrite={false}>
             {nextScenario.description}
           </Text>
@@ -374,7 +376,7 @@ function Scene({ scenario, nextScenario, onFinish, doorRefs, onAnimStart }) {
 
 // ─── Sliding transition wrapper (timeline nav only) ───────────────────────────
 function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
-  direction, skipSlide, onAnimStart }) {
+  direction, skipSlide, onAnimStart, onFinalDoorClick }) {
   const transitions = useTransition(scenario, {
     keys: s => s.title,
     immediate: skipSlide,
@@ -386,7 +388,7 @@ function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
   return transitions((style, item) => (
     <animated.group position={style.position}>
       <Scene scenario={item} nextScenario={nextScenario} onFinish={onFinish}
-        doorRefs={doorRefs} onAnimStart={onAnimStart} />
+        doorRefs={doorRefs} onAnimStart={onAnimStart} onFinalDoorClick={onFinalDoorClick} />
     </animated.group>
   ));
 }
@@ -400,7 +402,7 @@ function CameraController() {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function ScenarioScene({
-  scenario, nextScenario, choices, onChoice, direction, onNavigate, skipSlide
+  scenario, nextScenario, choices, onChoice, direction, onNavigate, skipSlide, onFinalDoorClick
 }) {
   const doorRefs = useRef([]);
   const cooldownRef = useRef(false);
@@ -443,7 +445,7 @@ export default function ScenarioScene({
       onTouchEnd={handleTouchEnd}
     >
       <Canvas frameloop="always" shadows
-        camera={{ position: [CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z], fov: FOV_DEFAULT, near: 0.1, far: 500000 }}
+        camera={{ position: [CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z], fov: getFovDefault(), near: 0.1, far: 500000 }}
         style={{ pointerEvents: "auto", width: "100%", height: "100%" }}>
         <CameraController />
         <Suspense fallback={null}>
@@ -455,10 +457,10 @@ export default function ScenarioScene({
             onFinish={onChoice} doorRefs={doorRefs}
             direction={direction || 1} skipSlide={skipSlide}
             onAnimStart={() => setIsAnimating(true)}
+            onFinalDoorClick={onFinalDoorClick}
           />
         </Suspense>
       </Canvas>
-      <MaskGrid choices={choices} />
     </div>
   );
 }

@@ -18,8 +18,8 @@ function StartButton3D({ onStart }) {
         }}
       >
         <planeGeometry args={[3.2, 1.0]} />
-        <meshBasicMaterial 
-          transparent 
+        <meshBasicMaterial
+          transparent
           opacity={0.7}
           color={0x000000}
         />
@@ -62,9 +62,10 @@ function StartButton3D({ onStart }) {
 }
 
 export default function IntroductionScreen({ onStart }) {
+  const isMobile = window.innerWidth < 768;
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 100 }}>
-      <Canvas style={{ position: 'absolute', top: 0, left: 0 }} camera={{ position: [0, 0, 5], fov: 50 }}>
+      <Canvas style={{ position: 'absolute', top: 0, left: 0 }} camera={{ position: [0, 0, 5], fov: isMobile ? 75 : 50 }}>
         <Suspense fallback={null}>
           <BackgroundShaders />
           <StartButton3D onStart={onStart} />
@@ -85,11 +86,11 @@ export default function IntroductionScreen({ onStart }) {
         }}
       >
         <motion.h1
+          className="intro-title"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           style={{
-            fontSize: '3.5rem',
             color: 'white',
             textShadow: '0 0 24px rgba(0,255,200,0.25)',
             marginBottom: '1.5rem',
@@ -101,11 +102,11 @@ export default function IntroductionScreen({ onStart }) {
         </motion.h1>
 
         <motion.div
+          className="intro-text"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
           style={{
-            fontSize: '1.2rem',
             color: 'rgba(255, 255, 255, 0.9)',
             lineHeight: '1.8',
             marginBottom: '2rem',

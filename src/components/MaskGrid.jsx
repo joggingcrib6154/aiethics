@@ -16,12 +16,9 @@ export default function MaskGrid({ choices = [] }) {
 
   return (
     <div
-      className="mask-grid"
+      className="mask-grid-container"
       style={{
         position: 'fixed',
-        top: 24,
-        right: 24,
-        transform: 'scale(0.5)',
         transformOrigin: 'top right',
         zIndex: 1000,
         display: 'grid',
@@ -96,7 +93,7 @@ export default function MaskGrid({ choices = [] }) {
 export async function downloadMaskGrid(choices) {
   console.log('=== Starting downloadMaskGrid ===');
   console.log('Choices:', choices);
-  
+
   try {
     const cols = 4;
     const rows = 5;
@@ -130,7 +127,7 @@ export async function downloadMaskGrid(choices) {
       const idx = typeof v === 'number' ? v : v?.index;
       if (idx === 0 || idx === 1 || idx === 2) {
         const q = i + 1;
-        const letter = ['a','b','c'][idx];
+        const letter = ['a', 'b', 'c'][idx];
         const src = `${process.env.PUBLIC_URL}/maskfrags/${q}${letter}.png`;
         imagesToLoad.push({ i, src });
       }
@@ -175,7 +172,7 @@ export async function downloadMaskGrid(choices) {
       const row = Math.floor(i / cols);
       const dx = col * tile * scale;
       const dy = row * tile * scale;
-      
+
       ctx.drawImage(img, dx, dy, tile * scale, tile * scale);
       console.log(`Drew image at position (${col}, ${row})`);
     });
@@ -189,7 +186,7 @@ export async function downloadMaskGrid(choices) {
         alert('Failed to create download blob');
         return;
       }
-      
+
       console.log('Blob created, size:', blob.size, 'bytes');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import html2canvas from 'html2canvas';
 import ShaderLabel from './ShaderLabel';
 
-function EndScreen({ choices = [], archetype = '' }) {
+function EndScreen({ choices = [], archetype = '', onEdit }) {
   const maskGridRef = useRef(null);
   const enrichedChoices = choices.map((choice, i) => {
     if (typeof choice === 'number') {
@@ -124,31 +124,31 @@ function EndScreen({ choices = [], archetype = '' }) {
         }}
       >
         <motion.h1
+          className="end-title"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1.05 }}
           transition={{ duration: 0.9 }}
-          style={{ fontSize: '3.5rem', color: 'white', textShadow: '0 0 24px rgba(0,255,200,0.25)' }}
+          style={{ color: 'white', textShadow: '0 0 24px rgba(0,255,200,0.25)' }}
         >
           {archetype}
         </motion.h1>
 
         <motion.p
+          className="end-text"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.8 }}
-          style={{ fontSize: '1.25rem', color: 'white', marginTop: '1rem', textShadow: '0 0 12px rgba(0,0,0,0.4)' }}
+          style={{ color: 'white', marginTop: '1rem', textShadow: '0 0 12px rgba(0,0,0,0.4)' }}
         >
           {message}
         </motion.p>
 
         <div
+          className="end-choices-container"
           style={{
             marginTop: '2rem',
-            padding: '1rem',
-            maxHeight: '40vh',
             overflowY: 'auto',
             textAlign: 'left',
-            maxWidth: '700px',
             marginLeft: 'auto',
             marginRight: 'auto',
             background: 'rgba(255, 255, 255, 0.1)',
@@ -179,11 +179,18 @@ function EndScreen({ choices = [], archetype = '' }) {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.4rem',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
                 }}
+                onClick={() => onEdit && onEdit(index)}
+                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
               >
                 {choice.title || choice.scenarioTitle ? (
-                  <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                    {choice.title || choice.scenarioTitle}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                      {choice.title || choice.scenarioTitle}
+                    </div>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.6, textDecoration: 'underline' }}>✎ Edit</span>
                   </div>
                 ) : null}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', justifyContent: 'flex-start' }}>
@@ -197,13 +204,13 @@ function EndScreen({ choices = [], archetype = '' }) {
                       flexShrink: 0,
                     }}
                   />
-                  <ShaderLabel 
-                    text={label} 
+                  <ShaderLabel
+                    text={label}
                     colorType={colorType}
                     style={{ fontSize: '0.85rem', fontWeight: 600 }}
                   />
                 </div>
-                <ShaderLabel 
+                <ShaderLabel
                   text={`Your choice: ${choice.answer || choice.text || choice.choice || choice.answerText || 'No choice recorded'}`}
                   colorType={colorType}
                   style={{ fontSize: '0.8rem', marginTop: '-0.2rem' }}
@@ -219,19 +226,8 @@ function EndScreen({ choices = [], archetype = '' }) {
       </div>
 
       <button
+        className="download-btn"
         onClick={handleDownloadMask}
-        style={{
-          position: 'absolute',
-          bottom: '2rem',
-          right: '2rem',
-          padding: '0.6rem 1rem',
-          background: 'linear-gradient(90deg,#06b6d4,#10b981)',
-          color: 'white',
-          border: 'none',
-          borderRadius: 8,
-          cursor: 'pointer',
-          zIndex: 4
-        }}
       >
         Download Your Mask
       </button>

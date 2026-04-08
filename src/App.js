@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './App.css';
 import scenarioData from './data/scenarios.json';
 import ScenarioScene from './components/ScenarioScene';
 import IntroductionScreen from './components/IntroductionScreen';
@@ -42,6 +43,7 @@ function App() {
   };
 
   const [choices, setChoices] = useState([]);
+  const [hideMaskGrid, setHideMaskGrid] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -63,13 +65,17 @@ function App() {
 
       const newChoices = [...choices];
       newChoices[currentIndex] = choiceObj;
-      const truncated = newChoices.slice(0, currentIndex + 1);
 
       // Door-click advance: suppress the slide — the 3D animation is the transition
       setSkipSlide(true);
-      setChoices(truncated);
+      setChoices(newChoices);
       setDirection(1);
-      setCurrentIndex(currentIndex + 1);
+
+      if (newChoices.length >= scenarioData.length && choices.length >= scenarioData.length) {
+        setCurrentIndex(scenarioData.length);
+      } else {
+        setCurrentIndex(currentIndex + 1);
+      }
     }
   };
 
@@ -113,7 +119,7 @@ function App() {
       ) : (
         <>
           <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }}>
-            <MaskGrid choices={choices} />
+            {!hideMaskGrid && <MaskGrid choices={choices} />}
           </div>
 
           {transitions((style, isGameOver) => (
@@ -122,12 +128,13 @@ function App() {
                 <>
                   <ScenarioScene
                     scenario={scenarioData[currentIndex]}
-                    nextScenario={scenarioData[currentIndex + 1]}
+                    nextScenario={choices.length >= scenarioData.length ? null : scenarioData[currentIndex + 1]}
                     onChoice={handleChoice}
                     choices={choices}
                     direction={direction}
                     onNavigate={handleNavigate}
                     skipSlide={skipSlide}
+                    onFinalDoorClick={() => setHideMaskGrid(true)}
                   />
                   <TimelineControls
                     total={scenarioData.length}
@@ -137,7 +144,16 @@ function App() {
                   />
                 </>
               ) : (
-                <EndScreen choices={choices} archetype={finalBadge} />
+                <EndScreen
+                  choices={choices}
+                  archetype={finalBadge}
+                  onEdit={(index) => {
+                    setSkipSlide(false);
+                    setDirection(-1);
+                    setCurrentIndex(index);
+                    setHideMaskGrid(false);
+                  }}
+                />
               )}
             </animated.div>
           ))}

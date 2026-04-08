@@ -1,4 +1,6 @@
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -26,4 +28,104 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+}
+
+/* Typography & Layout defaults that will be overridden on mobile */
+.intro-title {
+  font-size: 3.5rem;
+}
+
+.intro-text {
+  font-size: 1.2rem;
+}
+
+.end-title {
+  font-size: 3.5rem;
+}
+
+.end-text {
+  font-size: 1.25rem;
+}
+
+.end-choices-container {
+  padding: 1rem;
+  max-width: 700px;
+  max-height: 40vh;
+}
+
+.timeline-container {
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0 1rem;
+}
+
+.timeline-dot {
+  width: 3rem;
+  height: 0.5rem;
+}
+
+.mask-grid-container {
+  transform: scale(0.5);
+  top: 24px;
+  right: 24px;
+}
+
+.download-btn {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(90deg, #06b6d4, #10b981);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 4;
+}
+
+/* Responsive adjustments for phones and tablets */
+@media (max-width: 768px) {
+
+  .intro-title,
+  .end-title {
+    font-size: 2.2rem !important;
+  }
+
+  .intro-text,
+  .end-text {
+    font-size: 1rem !important;
+  }
+
+  .timeline-container {
+    gap: 0.3rem !important;
+    flex-wrap: wrap !important;
+    bottom: 1rem !important;
+    padding: 0 1rem;
+  }
+
+  .timeline-dot {
+    width: 1.2rem !important;
+    height: 0.4rem !important;
+  }
+
+  .end-choices-container {
+    padding: 0.5rem !important;
+    max-height: 50vh !important;
+  }
+
+  .mask-grid-container {
+    transform: scale(0.3) !important;
+    top: -10px !important;
+    right: -10px !important;
+  }
+
+  .download-btn {
+    bottom: 4rem;
+    right: 50%;
+    transform: translateX(50%);
+    width: 80%;
+    text-align: center;
+    font-size: 1.1rem;
+    padding: 0.8rem 1rem;
+  }
 }

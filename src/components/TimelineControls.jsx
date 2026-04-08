@@ -2,29 +2,29 @@ import React from 'react';
 
 export default function TimelineControls({ total, current, maxReached, onSelect }) {
     return (
-        <div style={{
-            position: 'absolute',
-            bottom: '2rem',
-            left: 0,
-            right: 0,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '1rem',
-            zIndex: 20,
-            pointerEvents: 'auto'
-        }}>
+        <div
+            className="timeline-container"
+            style={{
+                position: 'absolute',
+                bottom: '2rem',
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 20,
+                pointerEvents: 'auto'
+            }}>
             {Array.from({ length: total }).map((_, i) => {
                 const isCurrent = i === current;
                 const isReached = i <= maxReached;
                 return (
                     <button
                         key={i}
+                        className="timeline-dot"
                         onClick={() => isReached && onSelect(i)}
                         disabled={!isReached}
                         style={{
-                            width: '3rem',
-                            height: '0.5rem',
                             borderRadius: '9999px',
                             transition: 'all 0.3s ease',
                             border: 'none',
