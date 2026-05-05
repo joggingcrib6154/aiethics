@@ -1,12 +1,12 @@
 {
   "files": {
-    "main.css": "/aiethics/static/css/main.31566696.css",
-    "main.js": "/aiethics/static/js/main.0340597f.js",
+    "main.css": "/aiethics/static/css/main.d16f6e3f.css",
+    "main.js": "/aiethics/static/js/main.131f0853.js",
     "static/js/206.72e74d35.chunk.js": "/aiethics/static/js/206.72e74d35.chunk.js",
     "index.html": "/aiethics/index.html"
   },
   "entrypoints": [
-    "static/css/main.31566696.css",
-    "static/js/main.0340597f.js"
+    "static/css/main.d16f6e3f.css",
+    "static/js/main.131f0853.js"
   ]
 }
