@@ -53,6 +53,8 @@ function App() {
   const gameOver = currentIndex >= scenarioData.length && choices.length >= scenarioData.length;
   const finalBadge = gameOver ? assignBadge(choices) : null;
 
+
+
   const handleChoice = (choiceIndex) => {
     if (currentIndex < scenarioData.length) {
       const scenario = scenarioData[currentIndex];
@@ -105,14 +107,14 @@ function App() {
   };
 
   const transitions = useTransition(gameOver, {
-    from: { transform: 'translate3d(0, -100%, 0)' },
-    enter: { transform: 'translate3d(0, 0%, 0)' },
-    leave: { transform: 'translate3d(0, 100%, 0)' },
-    config: { tension: 120, friction: 30 }
+    from: { transform: 'translate3d(0, -100%, 0)', opacity: 0 },
+    enter: { transform: 'translate3d(0, 0%, 0)', opacity: 1 },
+    leave: { transform: 'translate3d(0, 100%, 0)', opacity: 0 },
+    config: { tension: 100, friction: 30 }
   });
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, color: 'white', overflow: 'hidden', backgroundColor: 'rgb(128, 102, 179)' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, color: 'white', overflow: 'hidden', backgroundColor: '#000000' }}>
 
       {!gameStarted ? (
         <IntroductionScreen onStart={() => setGameStarted(true)} />
@@ -121,6 +123,8 @@ function App() {
           <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }}>
             {!hideMaskGrid && <MaskGrid choices={choices} />}
           </div>
+
+
 
           {transitions((style, isGameOver) => (
             <animated.div style={{ ...style, position: 'absolute', width: '100%', height: '100%' }}>
