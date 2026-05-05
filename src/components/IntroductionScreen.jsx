@@ -91,7 +91,10 @@ export default function IntroductionScreen({ onStart }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           style={{
-            color: 'white',
+            color: 'transparent',
+            backgroundImage: 'linear-gradient(90deg, #ffffff, #00ffcc)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
             textShadow: '0 0 24px rgba(0,255,200,0.25)',
             marginBottom: '1.5rem',
             fontWeight: 700,

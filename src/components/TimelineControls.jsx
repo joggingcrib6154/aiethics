@@ -30,16 +30,16 @@ export default function TimelineControls({ total, current, maxReached, onSelect 
                             border: 'none',
                             outline: 'none',
                             cursor: isReached ? 'pointer' : 'not-allowed',
-                            backgroundColor: isCurrent ? 'white' : (isReached ? '#9ca3af' : '#374151'),
-                            opacity: (!isCurrent && !isReached) ? 0.5 : 1,
-                            transform: isCurrent ? 'scale(1.1)' : 'none',
-                            boxShadow: isCurrent ? '0 0 10px rgba(255,255,255,0.8)' : 'none'
+                            backgroundColor: isCurrent ? '#00ffcc' : (isReached ? 'rgba(0, 255, 204, 0.3)' : 'rgba(255, 255, 255, 0.1)'),
+                            opacity: 1,
+                            transform: isCurrent ? 'scale(1.2)' : 'none',
+                            boxShadow: isCurrent ? '0 0 15px rgba(0,255,204,0.6)' : 'none'
                         }}
                         onMouseEnter={(e) => {
-                            if (isReached && !isCurrent) e.currentTarget.style.backgroundColor = '#e5e7eb';
+                            if (isReached && !isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0, 255, 204, 0.5)';
                         }}
                         onMouseLeave={(e) => {
-                            if (isReached && !isCurrent) e.currentTarget.style.backgroundColor = '#9ca3af';
+                            if (isReached && !isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0, 255, 204, 0.3)';
                         }}
                     />
                 );

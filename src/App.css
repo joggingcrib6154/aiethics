@@ -31,20 +31,35 @@ body {
 }
 
 /* Typography & Layout defaults that will be overridden on mobile */
+h1,
+h2,
+h3,
+.intro-title,
+.end-title {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.5px;
+}
+
 .intro-title {
   font-size: 3.5rem;
 }
 
 .intro-text {
   font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0.2px;
 }
 
 .end-title {
   font-size: 3.5rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .end-text {
   font-size: 1.25rem;
+  font-weight: 400;
+  opacity: 0.9;
 }
 
 .end-choices-container {

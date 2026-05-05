@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import BackgroundShaders from './BackgroundShaders';
 import MaskGrid, { downloadMaskGrid } from './MaskGrid';
@@ -91,6 +91,28 @@ function EndScreen({ choices = [], archetype = '', onEdit }) {
     }
   }
 
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [processStep, setProcessStep] = useState(0);
+
+  const processLines = [
+    "> Initializing decision tree analysis...",
+    "> Processing ethical weights...",
+    "> Compiling human baseline...",
+    "> Archetype matching complete."
+  ];
+
+  useEffect(() => {
+    if (!isProcessing) return;
+
+    if (processStep < processLines.length) {
+      const timer = setTimeout(() => setProcessStep(prev => prev + 1), 600);
+      return () => clearTimeout(timer);
+    } else {
+      const finishTimer = setTimeout(() => setIsProcessing(false), 800);
+      return () => clearTimeout(finishTimer);
+    }
+  }, [processStep, isProcessing]);
+
   const handleDownloadMask = async () => {
     await downloadMaskGrid(enrichedChoices);
   };
@@ -109,128 +131,176 @@ function EndScreen({ choices = [], archetype = '', onEdit }) {
         <BackgroundShaders />
       </Canvas>
 
-      <div
-        style={{
-          position: 'absolute',
-          top: '55%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          textAlign: 'center',
-          width: '80%',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-          zIndex: 2,
-          pointerEvents: 'auto'
-        }}
-      >
-        <motion.h1
-          className="end-title"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1.05 }}
-          transition={{ duration: 0.9 }}
-          style={{ color: 'white', textShadow: '0 0 24px rgba(0,255,200,0.25)' }}
-        >
-          {archetype}
-        </motion.h1>
-
-        <motion.p
-          className="end-text"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.8 }}
-          style={{ color: 'white', marginTop: '1rem', textShadow: '0 0 12px rgba(0,0,0,0.4)' }}
-        >
-          {message}
-        </motion.p>
-
+      {isProcessing ? (
         <div
-          className="end-choices-container"
           style={{
-            marginTop: '2rem',
-            overflowY: 'auto',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
             textAlign: 'left',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(6px)',
-            borderRadius: '10px',
-            border: '1px solid rgba(255,255,255,0.15)',
+            width: '80%',
+            maxWidth: '600px',
+            zIndex: 2,
+            fontFamily: "'Roboto Mono', monospace",
+            color: '#00ffcc',
+            textShadow: '0 0 10px rgba(0, 255, 204, 0.5)'
           }}
         >
-          {enrichedChoices.map((choice, index) => {
-            const { label, colorType } = getTagLabel(choice.tag);
-            // Get static color for the dot (dark colors)
-            const dotColor = colorType === 'green' ? '#006600' : colorType === 'blue' ? '#000080' : '#800000';
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 + index * 0.05 }}
-                style={{
-                  color: 'white',
-                  marginBottom: '1rem',
-                  fontSize: '1rem',
-                  lineHeight: '1.5',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(0,0,0,0.2)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.4rem',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s',
-                }}
-                onClick={() => onEdit && onEdit(index)}
-                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
-              >
-                {choice.title || choice.scenarioTitle ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                      {choice.title || choice.scenarioTitle}
-                    </div>
-                    <span style={{ fontSize: '0.8rem', opacity: 0.6, textDecoration: 'underline' }}>✎ Edit</span>
-                  </div>
-                ) : null}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', justifyContent: 'flex-start' }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: '14px',
-                      height: '14px',
-                      borderRadius: '50%',
-                      backgroundColor: dotColor,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <ShaderLabel
-                    text={label}
-                    colorType={colorType}
-                    style={{ fontSize: '0.85rem', fontWeight: 600 }}
-                  />
-                </div>
-                <ShaderLabel
-                  text={`Your choice: ${choice.answer || choice.text || choice.choice || choice.answerText || 'No choice recorded'}`}
-                  colorType={colorType}
-                  style={{ fontSize: '0.8rem', marginTop: '-0.2rem' }}
-                />
-              </motion.div>
-            );
-          })}
+          {processLines.slice(0, processStep).map((line, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              style={{ fontSize: '1.2rem', marginBottom: '1rem', fontWeight: 'bold' }}
+            >
+              {line}
+            </motion.div>
+          ))}
+          {processStep < processLines.length && (
+            <motion.div
+              animate={{ opacity: [1, 0, 1] }}
+              transition={{ repeat: Infinity, duration: 0.8 }}
+              style={{ fontSize: '1.2rem', display: 'inline-block' }}
+            >
+              █
+            </motion.div>
+          )}
         </div>
-      </div>
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            top: '55%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            width: '80%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            zIndex: 2,
+            pointerEvents: 'auto'
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '2px' }}
+          >
+            Based on your data, your archetype is
+          </motion.div>
+          <motion.h1
+            className="end-title"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1.05 }}
+            transition={{ duration: 0.9 }}
+            style={{ color: 'white', textShadow: '0 0 24px rgba(0,255,200,0.25)' }}
+          >
+            {archetype}
+          </motion.h1>
+
+          <motion.p
+            className="end-text"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.8 }}
+            style={{ color: 'white', marginTop: '1rem', textShadow: '0 0 12px rgba(0,0,0,0.4)' }}
+          >
+            {message}
+          </motion.p>
+
+          <div
+            className="end-choices-container"
+            style={{
+              marginTop: '2rem',
+              overflowY: 'auto',
+              textAlign: 'left',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(6px)',
+              borderRadius: '10px',
+              border: '1px solid rgba(255,255,255,0.15)',
+            }}
+          >
+            {enrichedChoices.map((choice, index) => {
+              const { label, colorType } = getTagLabel(choice.tag);
+              // Get static color for the dot (dark colors)
+              const dotColor = colorType === 'green' ? '#006600' : colorType === 'blue' ? '#000080' : '#800000';
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 + index * 0.05 }}
+                  style={{
+                    color: 'white',
+                    marginBottom: '1rem',
+                    fontSize: '1rem',
+                    lineHeight: '1.5',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(0,255,204,0.2)',
+                    background: 'rgba(0,255,204,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.4rem',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onClick={() => onEdit && onEdit(index)}
+                  whileHover={{ backgroundColor: 'rgba(0,255,204,0.15)', borderColor: 'rgba(0,255,204,0.4)' }}
+                >
+                  {choice.title || choice.scenarioTitle ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                        {choice.title || choice.scenarioTitle}
+                      </div>
+                      <span style={{ fontSize: '0.8rem', opacity: 0.6, textDecoration: 'underline' }}>✎ Edit</span>
+                    </div>
+                  ) : null}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', justifyContent: 'flex-start' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        backgroundColor: dotColor,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <ShaderLabel
+                      text={label}
+                      colorType={colorType}
+                      style={{ fontSize: '0.85rem', fontWeight: 600 }}
+                    />
+                  </div>
+                  <ShaderLabel
+                    text={`Your choice: ${choice.answer || choice.text || choice.choice || choice.answerText || 'No choice recorded'}`}
+                    colorType={colorType}
+                    style={{ fontSize: '0.8rem', marginTop: '-0.2rem' }}
+                  />
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, pointerEvents: 'auto' }} ref={maskGridRef}>
         <MaskGrid choices={enrichedChoices} />
       </div>
 
-      <button
-        className="download-btn"
-        onClick={handleDownloadMask}
-      >
-        Download Your Mask
-      </button>
+      {!isProcessing && (
+        <button
+          className="download-btn"
+          onClick={handleDownloadMask}
+        >
+          Download Your Mask
+        </button>
+      )}
     </div>
   );
 }

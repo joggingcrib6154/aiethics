@@ -380,13 +380,21 @@ function TransitionManager({ scenario, nextScenario, onFinish, doorRefs,
   const transitions = useTransition(scenario, {
     keys: s => s.title,
     immediate: skipSlide,
-    from: { position: skipSlide ? [0, 0, 0] : [direction * 18, 0, 0] },
-    enter: { position: [0, 0, 0] },
-    leave: { position: skipSlide ? [0, 0, 0] : [-direction * 18, 0, 0] },
-    config: { tension: 110, friction: 22 },
+    from: {
+      position: skipSlide ? [0, 0, 0] : [direction * 18, 0, -5],
+      scale: skipSlide ? [1, 1, 1] : [0.8, 0.8, 0.8],
+      rotation: skipSlide ? [0, 0, 0] : [0, -direction * 0.35, 0]
+    },
+    enter: { position: [0, 0, 0], scale: [1, 1, 1], rotation: [0, 0, 0] },
+    leave: {
+      position: skipSlide ? [0, 0, 0] : [-direction * 18, 0, -5],
+      scale: skipSlide ? [1, 1, 1] : [0.8, 0.8, 0.8],
+      rotation: skipSlide ? [0, 0, 0] : [0, direction * 0.35, 0]
+    },
+    config: { tension: 100, friction: 26 },
   });
   return transitions((style, item) => (
-    <animated.group position={style.position}>
+    <animated.group position={style.position} scale={style.scale} rotation={style.rotation}>
       <Scene scenario={item} nextScenario={nextScenario} onFinish={onFinish}
         doorRefs={doorRefs} onAnimStart={onAnimStart} onFinalDoorClick={onFinalDoorClick} />
     </animated.group>
